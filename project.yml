@@ -1,0 +1,27 @@
+name: MailSwipe
+options:
+  bundleIdPrefix: com.floviret
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  MailSwipe:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Sources/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - $(GOOGLE_REVERSED_CLIENT_ID_SCHEME)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.floviret.mailswipe
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GOOGLE_REVERSED_CLIENT_ID_SCHEME: mailswipe.oauth
