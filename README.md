@@ -11,6 +11,18 @@ Une app iOS pour gérer ses mails Gmail d'un geste : swipe droite pour répondre
 | ↑ Haut | Archiver |
 | ↓ Bas | Snoozer (revient plus tard, avec notification) |
 
+## Captures d'écran
+
+Captures prises sur simulateur iPhone 17, en **mode démo** (mails fictifs, aucun compte Gmail requis).
+
+| Inbox | Répondre | Snoozer |
+|---|---|---|
+| ![Inbox](docs/screenshots/inbox.png) | ![Répondre](docs/screenshots/reply.png) | ![Snoozer](docs/screenshots/snooze.png) |
+
+| Archive | Snoozés | Réglages |
+|---|---|---|
+| ![Archive](docs/screenshots/archive.png) | ![Snoozés](docs/screenshots/snoozed_list.png) | ![Réglages](docs/screenshots/settings.png) |
+
 ## Setup
 
 Prérequis : Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
