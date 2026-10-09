@@ -9,7 +9,7 @@ final class PaginationTests: XCTestCase {
     override func setUp() async throws {
         spy = SpyMailService()
         spy.pageSize = 4
-        store = EmailStore(auth: AuthManager(), mock: spy)
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0)
         await store.loadInbox()
     }
 
@@ -21,7 +21,7 @@ final class PaginationTests: XCTestCase {
     func testNoPrefetchWhileEnoughCardsRemain() async {
         let big = SpyMailService()
         big.pageSize = 8
-        let bigStore = EmailStore(auth: AuthManager(), mock: big)
+        let bigStore = EmailStore(auth: AuthManager(), mock: big, undoDelay: 0)
         await bigStore.loadInbox()
         await bigStore.loadMoreIfNeeded()
         XCTAssertEqual(bigStore.inbox.count, 8)
