@@ -35,7 +35,7 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
 
     func signIn() {
         guard Config.isGmailConfigured else {
-            lastError = "Configure d'abord ton Client ID Google dans Config.swift."
+            lastError = String(localized: "Configure d'abord ton Client ID Google dans Config.swift.")
             return
         }
 
@@ -156,7 +156,7 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
             isSignedIn = true
             await fetchUserEmail()
         } catch {
-            lastError = "Échec de connexion Gmail : \(error.localizedDescription)"
+            lastError = String(localized: "Échec de connexion Gmail : \(error.localizedDescription)")
         }
     }
 
@@ -266,9 +266,9 @@ enum AuthFlowError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .stateMismatch: return "La réponse de Google ne correspond pas à ta demande de connexion. Réessaie."
-        case .missingCode: return "Autorisation Google incomplète."
-        case .denied(let reason): return "Google a refusé la connexion (\(reason))."
+        case .stateMismatch: return String(localized: "La réponse de Google ne correspond pas à ta demande de connexion. Réessaie.")
+        case .missingCode: return String(localized: "Autorisation Google incomplète.")
+        case .denied(let reason): return String(localized: "Google a refusé la connexion (\(reason)).")
         }
     }
 }
@@ -281,11 +281,11 @@ enum GmailError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .notSignedIn:
-            return "Non connecté à Gmail."
+            return String(localized: "Non connecté à Gmail.")
         case .sessionExpired:
-            return "Ta session Gmail a expiré. Reconnecte-toi pour continuer."
+            return String(localized: "Ta session Gmail a expiré. Reconnecte-toi pour continuer.")
         case .api(let status, let message):
-            return message.isEmpty ? "Gmail a répondu avec une erreur (\(status))." : message
+            return message.isEmpty ? String(localized: "Gmail a répondu avec une erreur (\(status)).") : message
         }
     }
 

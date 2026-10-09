@@ -42,7 +42,7 @@ struct SettingsView: View {
                 }
 
                 Section("À propos") {
-                    LabeledContent("Gestes", value: "Glisse la carte dans une direction")
+                    LabeledContent("Gestes", value: String(localized: "Glisse la carte dans une direction"))
                     VStack(alignment: .leading, spacing: 6) {
                         Text("→ Droite : Répondre")
                         Text("← Gauche : Supprimer")

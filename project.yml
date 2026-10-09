@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+  developmentLanguage: fr
 targets:
   MailSwipe:
     type: application
@@ -16,6 +17,9 @@ targets:
         UILaunchScreen: {}
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations:
+          - fr
+          - en
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.productivity
         UISupportedInterfaceOrientations:

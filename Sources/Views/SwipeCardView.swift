@@ -34,7 +34,7 @@ struct SwipeCardView<Content: View>: View {
             .gesture(dragGesture)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Touchez deux fois pour lire le mail. Balayez vers le haut ou le bas pour les actions : répondre, supprimer, archiver ou snoozer.")
+            .accessibilityHint(Text("Touchez deux fois pour lire le mail. Balayez vers le haut ou le bas pour les actions : répondre, supprimer, archiver ou snoozer."))
             .accessibilityAction(.default) { onTap?() }
             .accessibilityAction(named: Text(SwipeDirection.right.actionTitle)) { onCommit(.right) }
             .accessibilityAction(named: Text(SwipeDirection.left.actionTitle)) { onCommit(.left) }

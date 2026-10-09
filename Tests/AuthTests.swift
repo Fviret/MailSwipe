@@ -61,7 +61,7 @@ final class GmailErrorTests: XCTestCase {
 
     func testRawBodyIsNeverShownToUser() {
         XCTAssertThrowsError(try GmailError.validate(response(500), data: Data("<html>oops</html>".utf8))) {
-            XCTAssertEqual(($0 as? GmailError)?.errorDescription, "Gmail a répondu avec une erreur (500).")
+            XCTAssertEqual(($0 as? GmailError)?.errorDescription, String(localized: "Gmail a répondu avec une erreur (\(500))."))
         }
     }
 }

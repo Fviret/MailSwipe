@@ -67,10 +67,19 @@ struct ReplySheet: View {
         .presentationDetents([.medium, .large])
     }
 
+    private static var suggestions: [String] {
+        [
+            String(localized: "Merci, bien reçu !"),
+            String(localized: "Je regarde ça et je reviens vers toi."),
+            String(localized: "Ok pour moi 👍"),
+            String(localized: "Pas dispo, on reprogramme ?"),
+        ]
+    }
+
     private var quickReplies: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(["Merci, bien reçu !", "Je regarde ça et je reviens vers toi.", "Ok pour moi 👍", "Pas dispo, on reprogramme ?"], id: \.self) { suggestion in
+                ForEach(Self.suggestions, id: \.self) { suggestion in
                     Button(suggestion) { text = suggestion }
                         .font(.caption)
                         .padding(.horizontal, 12)

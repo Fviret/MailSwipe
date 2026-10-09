@@ -225,12 +225,12 @@ private struct MessageDetail: Decodable {
     }
 
     func asEmailCard() -> EmailCard {
-        let from = header("From") ?? "Inconnu"
+        let from = header("From") ?? String(localized: "Inconnu")
         let (name, email) = Self.parseSender(from)
         return EmailCard(
             id: id,
             threadId: threadId,
-            subject: header("Subject") ?? "(sans objet)",
+            subject: header("Subject") ?? String(localized: "(sans objet)"),
             snippet: snippet ?? "",
             senderName: name,
             senderEmail: email,

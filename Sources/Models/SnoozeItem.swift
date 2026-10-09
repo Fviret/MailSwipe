@@ -13,10 +13,10 @@ enum SnoozeDuration: CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .oneHour: return "Dans 1 heure"
-        case .thisEvening: return "Ce soir (18h)"
-        case .tomorrowMorning: return "Demain matin (8h)"
-        case .nextWeek: return "La semaine prochaine"
+        case .oneHour: return String(localized: "Dans 1 heure")
+        case .thisEvening: return String(localized: "Ce soir (18h)")
+        case .tomorrowMorning: return String(localized: "Demain matin (8h)")
+        case .nextWeek: return String(localized: "La semaine prochaine")
         }
     }
 

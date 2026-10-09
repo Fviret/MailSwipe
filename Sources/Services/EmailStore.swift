@@ -118,7 +118,7 @@ final class EmailStore: ObservableObject {
             resurfaceDueSnoozes()
         } catch {
             guard generation == loadGeneration else { return }
-            errorMessage = "Impossible de charger la boîte de réception : \(error.localizedDescription)"
+            errorMessage = String(localized: "Impossible de charger la boîte de réception : \(error.localizedDescription)")
         }
     }
 
@@ -137,7 +137,7 @@ final class EmailStore: ObservableObject {
             inbox.append(contentsOf: page.cards.filter { !known.contains($0.id) })
             apply(page)
         } catch {
-            errorMessage = "Impossible de charger plus de mails : \(error.localizedDescription)"
+            errorMessage = String(localized: "Impossible de charger plus de mails : \(error.localizedDescription)")
         }
     }
 
@@ -145,7 +145,7 @@ final class EmailStore: ObservableObject {
         nextPageToken = page.nextPageToken
         hasMore = page.nextPageToken != nil
         if page.failedCount > 0 {
-            errorMessage = "\(page.failedCount) mail(s) n'ont pas pu être chargés. Tire pour actualiser."
+            errorMessage = String(localized: "\(page.failedCount) mail(s) n'ont pas pu être chargés. Appuie sur Actualiser pour réessayer.")
         }
     }
 
@@ -222,31 +222,31 @@ final class EmailStore: ObservableObject {
         switch action.kind {
         case .reply(let text):
             do { try await service.sendReply(to: card, body: text) }
-            catch { rollback(action, message: "Échec de l'envoi", error: error) }
+            catch { rollback(action, message: String(localized: "Échec de l'envoi : \(error.localizedDescription)")) }
         case .delete:
             do { try await service.trash(messageId: card.id) }
-            catch { rollback(action, message: "Échec de la suppression", error: error) }
+            catch { rollback(action, message: String(localized: "Échec de la suppression : \(error.localizedDescription)")) }
         case .archive:
             archived.insert(card, at: 0)
             do { try await service.archive(messageId: card.id) }
             catch {
                 archived.removeAll { $0.id == card.id }
-                rollback(action, message: "Échec de l'archivage", error: error)
+                rollback(action, message: String(localized: "Échec de l'archivage : \(error.localizedDescription)"))
             }
         case .snooze(let date):
             snoozeScheduler.snooze(card, until: date)
             do { try await service.snooze(messageId: card.id) }
             catch {
                 snoozeScheduler.remove(id: card.id)
-                rollback(action, message: "Échec du snooze", error: error)
+                rollback(action, message: String(localized: "Échec du snooze : \(error.localizedDescription)"))
             }
         }
     }
 
-    private func rollback(_ action: PendingAction, message: String, error: Error) {
+    private func rollback(_ action: PendingAction, message: String) {
         handledIds.remove(action.card.id)
         reinsert(action.card, at: action.index)
-        errorMessage = "\(message) : \(error.localizedDescription)"
+        errorMessage = message
     }
 
     private func reinsert(_ card: EmailCard, at index: Int) {
@@ -296,7 +296,7 @@ final class EmailStore: ObservableObject {
         for item in due {
             Task {
                 do { try await service.unsnooze(messageId: item.id) }
-                catch { errorMessage = "Impossible de remettre « \(item.card.subject) » dans ta boîte Gmail : \(error.localizedDescription)" }
+                catch { errorMessage = String(localized: "Impossible de remettre « \(item.card.subject) » dans ta boîte Gmail : \(error.localizedDescription)") }
             }
         }
     }

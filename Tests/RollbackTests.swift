@@ -20,7 +20,7 @@ final class RollbackTests: XCTestCase {
         spy.failing = true
         await store.delete(card).value
         XCTAssertEqual(store.inbox[2], card)
-        XCTAssertEqual(store.errorMessage, "Échec de la suppression : boom")
+        XCTAssertEqual(store.errorMessage, String(localized: "Échec de la suppression : \("boom")"))
     }
 
     func testArchiveFailureRestoresCardAndClearsArchive() async {

@@ -26,10 +26,10 @@ enum SwipeDirection {
 extension SwipeDirection {
     var actionTitle: String {
         switch self {
-        case .right: return "Répondre"
-        case .left: return "Supprimer"
-        case .up: return "Archiver"
-        case .down: return "Snoozer"
+        case .right: return String(localized: "Répondre")
+        case .left: return String(localized: "Supprimer")
+        case .up: return String(localized: "Archiver")
+        case .down: return String(localized: "Snoozer")
         }
     }
 

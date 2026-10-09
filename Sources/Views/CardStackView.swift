@@ -95,7 +95,7 @@ struct CardStackView: View {
         ) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("\(noReplyCard?.senderName ?? "Cet expéditeur") utilise une adresse « ne pas répondre ».")
+            Text("\(noReplyCard?.senderName ?? String(localized: "Cet expéditeur")) utilise une adresse « ne pas répondre ».")
         }
         .sheet(item: $detailCard) { card in
             EmailDetailView(card: card) {
@@ -157,7 +157,7 @@ private struct UndoToast: View {
             Text(message)
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Button("Annuler", action: onUndo)
+            Button("undo_button", action: onUndo)
                 .bold()
                 .foregroundStyle(.yellow)
         }
@@ -177,7 +177,7 @@ private struct UndoToast: View {
         .padding(.horizontal, 24)
         .onAppear {
             withAnimation(.linear(duration: action.delay)) { remaining = 0 }
-            AccessibilityNotification.Announcement("\(message). Annuler disponible.").post()
+            AccessibilityNotification.Announcement(String(localized: "\(message). Annulation possible.")).post()
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
@@ -186,10 +186,10 @@ private struct UndoToast: View {
     private var message: String {
         let name = action.card.senderName
         switch action.kind {
-        case .reply: return "Réponse à \(name) en cours d'envoi"
-        case .delete: return "Supprimé · \(name)"
-        case .archive: return "Archivé · \(name)"
-        case .snooze: return "Snoozé · \(name)"
+        case .reply: return String(localized: "Réponse à \(name) en cours d'envoi")
+        case .delete: return String(localized: "Supprimé · \(name)")
+        case .archive: return String(localized: "Archivé · \(name)")
+        case .snooze: return String(localized: "Snoozé · \(name)")
         }
     }
 }
