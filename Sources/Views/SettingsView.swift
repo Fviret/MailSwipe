@@ -29,6 +29,18 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("Confidentialité et assistance") {
+                    Link(destination: Config.privacyPolicyURL) {
+                        Label("Politique de confidentialité", systemImage: "hand.raised")
+                    }
+                    Link(destination: Config.supportURL) {
+                        Label("Assistance", systemImage: "questionmark.circle")
+                    }
+                    Text("Tes mails ne transitent que entre ton iPhone et Google. Aucun serveur MailSwipe, aucun suivi.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("À propos") {
                     LabeledContent("Gestes", value: "Glisse la carte dans une direction")
                     VStack(alignment: .leading, spacing: 6) {
