@@ -58,8 +58,8 @@ final class SnoozeScheduler: ObservableObject {
     private func scheduleNotification(for item: SnoozeItem) {
         let content = UNMutableNotificationContent()
         // Volontairement générique : l'expéditeur et l'objet ne doivent pas s'afficher sur l'écran verrouillé.
-        content.title = "📬 Un mail snoozé est de retour"
-        content.body = "Ouvre MailSwipe pour le traiter." 
+        content.title = String(localized: "📬 Un mail snoozé est de retour")
+        content.body = String(localized: "Ouvre MailSwipe pour le traiter.")
         content.sound = .default
 
         let interval = max(item.wakeAt.timeIntervalSinceNow, 1)

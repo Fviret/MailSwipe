@@ -5,7 +5,7 @@ enum ReplyError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .invalidRecipient(let address): return "Adresse de réponse invalide : \(address)"
+        case .invalidRecipient(let address): return String(localized: "Adresse de réponse invalide : \(address)")
         }
     }
 }

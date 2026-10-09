@@ -71,7 +71,7 @@ struct EmailDetailView: View {
         do {
             phase = .loaded(try await store.body(for: card))
         } catch {
-            phase = .failed("Impossible de charger le mail complet : \(error.localizedDescription)")
+            phase = .failed(String(localized: "Impossible de charger le mail complet : \(error.localizedDescription)"))
         }
     }
 }
