@@ -12,6 +12,39 @@ struct CardStackView: View {
     private let maxVisible = 3
 
     var body: some View {
+        VStack(spacing: 0) {
+            stack
+            legend
+        }
+    }
+
+    /// Les 4 gestes sous forme de boutons : alternative au swipe (VoiceOver, Contrôle de commande, préférence).
+    private var legend: some View {
+        HStack(spacing: 8) {
+            ForEach([SwipeDirection.left, .down, .up, .right], id: \.self) { direction in
+                Button { trigger(direction) } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: direction.symbolName).foregroundStyle(direction.color)
+                        Text(direction.actionTitle).font(.caption2).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(store.inbox.isEmpty)
+                .accessibilityLabel(Text(direction.actionTitle))
+                .accessibilityHint(Text("Applique cette action au mail affiché"))
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func trigger(_ direction: SwipeDirection) {
+        guard let card = store.inbox.first else { return }
+        handleCommit(card: card, direction: direction)
+    }
+
+    private var stack: some View {
         ZStack {
             if store.inbox.isEmpty && (store.isLoading || store.isLoadingMore) {
                 ProgressView()
@@ -144,6 +177,7 @@ private struct UndoToast: View {
         .padding(.horizontal, 24)
         .onAppear {
             withAnimation(.linear(duration: action.delay)) { remaining = 0 }
+            AccessibilityNotification.Announcement("\(message). Annuler disponible.").post()
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)

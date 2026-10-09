@@ -25,35 +25,23 @@ struct InboxView: View {
                     Spacer()
                 } else {
                     CardStackView()
-                    swipeLegend
                 }
             }
             .navigationTitle("Inbox")
             .navigationBarTitleDisplayMode(.inline)
             .task { await store.loadInbox() }
-            .refreshable { await store.loadInbox(force: true) }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await store.loadInbox(force: true) }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(store.isLoading)
+                    .accessibilityLabel(Text("Actualiser"))
+                }
+            }
         }
-    }
-
-    private var swipeLegend: some View {
-        HStack(spacing: 18) {
-            legendItem(symbol: "trash.fill", label: "Supprimer", color: .red)
-            legendItem(symbol: "clock.fill", label: "Snoozer", color: .purple)
-            legendItem(symbol: "archivebox.fill", label: "Archiver", color: .blue)
-            legendItem(symbol: "arrowshape.turn.up.left.fill", label: "Répondre", color: .green)
-        }
-        .padding(.vertical, 10)
-    }
-
-    private func legendItem(symbol: String, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: symbol)
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
