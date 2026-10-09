@@ -9,20 +9,23 @@ final class GmailAPI: MailService {
         self.auth = auth
     }
 
-    func fetchInbox() async throws -> [EmailCard] {
-        try await fetchInbox(maxResults: 20)
+    func fetchInbox(pageToken: String?) async throws -> MailPage {
+        try await fetchInbox(maxResults: 20, pageToken: pageToken)
     }
 
-    private func fetchInbox(maxResults: Int) async throws -> [EmailCard] {
+    private func fetchInbox(maxResults: Int, pageToken: String?) async throws -> MailPage {
         var components = URLComponents(url: baseURL.appendingPathComponent("messages"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "maxResults", value: String(maxResults)),
             URLQueryItem(name: "labelIds", value: "INBOX"),
             URLQueryItem(name: "q", value: "in:inbox"),
         ]
+        if let pageToken { components.queryItems?.append(URLQueryItem(name: "pageToken", value: pageToken)) }
         let listData = try await get(components.url!)
         let list = try JSONDecoder().decode(MessageListResponse.self, from: listData)
-        guard let messages = list.messages, !messages.isEmpty else { return [] }
+        guard let messages = list.messages, !messages.isEmpty else {
+            return MailPage(cards: [], nextPageToken: list.nextPageToken)
+        }
 
         return try await withThrowingTaskGroup(of: Result<EmailCard, Error>.self) { group in
             for message in messages {
@@ -33,15 +36,22 @@ final class GmailAPI: MailService {
             }
             var cards: [EmailCard] = []
             var firstError: Error?
+            var failed = 0
             for try await result in group {
                 switch result {
                 case .success(let card): cards.append(card)
-                case .failure(let error): firstError = firstError ?? error
+                case .failure(let error):
+                    failed += 1
+                    firstError = firstError ?? error
                 }
             }
             // Tout a échoué : on remonte l'erreur au lieu d'afficher une fausse « boîte vide ».
             if cards.isEmpty, let firstError { throw firstError }
-            return cards.sorted { $0.date > $1.date }
+            return MailPage(
+                cards: cards.sorted { $0.date > $1.date },
+                nextPageToken: list.nextPageToken,
+                failedCount: failed
+            )
         }
     }
 
@@ -145,6 +155,7 @@ final class GmailAPI: MailService {
 private struct MessageListResponse: Decodable {
     struct Item: Decodable { let id: String }
     let messages: [Item]?
+    let nextPageToken: String?
 }
 
 private struct ModifyRequest: Encodable {

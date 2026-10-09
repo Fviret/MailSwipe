@@ -7,6 +7,7 @@ final class SpyMailService: MailService, @unchecked Sendable {
 
     var failing = false
     var cards: [EmailCard] = MockData.inbox()
+    var pageSize = Int.max
     private(set) var calls: [String] = []
 
     private func record(_ name: String) throws {
@@ -14,7 +15,12 @@ final class SpyMailService: MailService, @unchecked Sendable {
         if failing { throw Failure() }
     }
 
-    func fetchInbox() async throws -> [EmailCard] { try record("fetchInbox"); return cards }
+    func fetchInbox(pageToken: String?) async throws -> MailPage {
+        try record("fetchInbox:\(pageToken ?? "-")")
+        let start = Int(pageToken ?? "") ?? 0
+        let end = min(start + pageSize, cards.count)
+        return MailPage(cards: Array(cards[start..<end]), nextPageToken: end < cards.count ? String(end) : nil)
+    }
     func trash(messageId: String) async throws { try record("trash:\(messageId)") }
     func archive(messageId: String) async throws { try record("archive:\(messageId)") }
     func snooze(messageId: String) async throws { try record("snooze:\(messageId)") }

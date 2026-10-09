@@ -12,7 +12,9 @@ struct CardStackView: View {
 
     var body: some View {
         ZStack {
-            if store.inbox.isEmpty && !store.isLoading {
+            if store.inbox.isEmpty && (store.isLoading || store.isLoadingMore) {
+                ProgressView()
+            } else if store.inbox.isEmpty && !store.hasMore {
                 EmptyStateView(
                     icon: "tray",
                     title: "Boîte vide",
@@ -40,6 +42,9 @@ struct CardStackView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        .onChange(of: store.inbox.count) {
+            Task { await store.loadMoreIfNeeded() }
+        }
         .sheet(item: $pendingReply) { card in
             ReplySheet(card: card) { text in
                 store.reply(card, text: text)
