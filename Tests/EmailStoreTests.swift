@@ -10,7 +10,7 @@ final class EmailStoreTests: XCTestCase {
     func testLoadInboxFillsFromMockService() async {
         let store = makeStore()
         await store.loadInbox()
-        XCTAssertEqual(store.inbox.count, MockData.inbox().count)
+        XCTAssertEqual(store.inbox.count, MockMailService.defaultPageSize)
     }
 
     func testLoadInboxDoesNotResetAfterSwipes() async {
@@ -27,7 +27,7 @@ final class EmailStoreTests: XCTestCase {
         await store.loadInbox()
         store.delete(store.inbox[0])
         await store.loadInbox(force: true)
-        XCTAssertEqual(store.inbox.count, MockData.inbox().count)
+        XCTAssertEqual(store.inbox.count, MockMailService.defaultPageSize)
     }
 
     func testArchiveMovesCardToArchive() async {

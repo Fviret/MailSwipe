@@ -8,6 +8,8 @@ final class EmailStore: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var lastAction: LastAction?
+    @Published private(set) var hasMore = false
+    @Published private(set) var isLoadingMore = false
     @Published private var forcedMockPreview = false
 
     let auth: AuthManager
@@ -16,6 +18,11 @@ final class EmailStore: ObservableObject {
     private let mockService: MailService
     private var dueCheckTimer: Timer?
     private var hasLoadedOnce = false
+    private var nextPageToken: String?
+    private var loadGeneration = 0
+    /// Mails déjà traités pendant cette session : Gmail peut encore les renvoyer quelques secondes.
+    private var handledIds = Set<String>()
+    static let prefetchThreshold = 5
 
     var isMockMode: Bool { !Config.isGmailConfigured || forcedMockPreview }
 
@@ -50,15 +57,51 @@ final class EmailStore: ObservableObject {
     /// (ex. changement d'onglet).
     func loadInbox(force: Bool = false) async {
         guard force || !hasLoadedOnce else { return }
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false; hasLoadedOnce = true }
+        nextPageToken = nil
+        hasMore = false
+        defer { if generation == loadGeneration { isLoading = false; hasLoadedOnce = true } }
 
         guard isMockMode || auth.isSignedIn else { return }
         do {
-            inbox = try await service.fetchInbox()
+            let page = try await service.fetchInbox(pageToken: nil)
+            guard generation == loadGeneration else { return }
+            handledIds.removeAll()
+            inbox = page.cards
+            apply(page)
         } catch {
+            guard generation == loadGeneration else { return }
             errorMessage = "Impossible de charger la boîte de réception : \(error.localizedDescription)"
+        }
+    }
+
+    /// Charge la page suivante quand il reste peu de cartes à traiter.
+    func loadMoreIfNeeded() async {
+        guard hasMore, !isLoadingMore, !isLoading, inbox.count <= Self.prefetchThreshold,
+              let token = nextPageToken else { return }
+        let generation = loadGeneration
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+        do {
+            let page = try await service.fetchInbox(pageToken: token)
+            guard generation == loadGeneration else { return }
+            let known = Set(inbox.map(\.id)).union(archived.map(\.id)).union(handledIds)
+                .union(snoozeScheduler.items.map(\.id))
+            inbox.append(contentsOf: page.cards.filter { !known.contains($0.id) })
+            apply(page)
+        } catch {
+            errorMessage = "Impossible de charger plus de mails : \(error.localizedDescription)"
+        }
+    }
+
+    private func apply(_ page: MailPage) {
+        nextPageToken = page.nextPageToken
+        hasMore = page.nextPageToken != nil
+        if page.failedCount > 0 {
+            errorMessage = "\(page.failedCount) mail(s) n'ont pas pu être chargés. Tire pour actualiser."
         }
     }
 
@@ -124,10 +167,12 @@ final class EmailStore: ObservableObject {
         errorMessage = nil
         let index = inbox.firstIndex { $0.id == card.id } ?? 0
         inbox.removeAll { $0.id == card.id }
+        handledIds.insert(card.id)
         return index
     }
 
     private func rollback(_ card: EmailCard, at index: Int, message: String, error: Error) {
+        handledIds.remove(card.id)
         if !inbox.contains(where: { $0.id == card.id }) {
             inbox.insert(card, at: min(index, inbox.count))
         }

@@ -64,6 +64,66 @@ enum MockData {
                 date: now.addingTimeInterval(-3600 * 48),
                 isUnread: false
             ),
+            EmailCard(
+                id: "mock-7",
+                threadId: "thread-7",
+                subject: "Rappel : rendez-vous médecin demain 9h30",
+                snippet: "Nous vous rappelons votre rendez-vous de demain à 9h30. En cas d'empêchement, merci de nous prévenir 24h à l'avance.",
+                senderName: "Cabinet Dr Martin",
+                senderEmail: "secretariat@cabinet-martin.fr",
+                date: now.addingTimeInterval(-3600 * 52),
+                isUnread: true
+            ),
+            EmailCard(
+                id: "mock-8",
+                threadId: "thread-8",
+                subject: "Ton abonnement salle de sport arrive à échéance",
+                snippet: "Ton abonnement se termine le 30 septembre. Renouvelle-le avant cette date pour garder ton tarif préférentiel.",
+                senderName: "FitClub",
+                senderEmail: "contact@fitclub.fr",
+                date: now.addingTimeInterval(-3600 * 60),
+                isUnread: false
+            ),
+            EmailCard(
+                id: "mock-9",
+                threadId: "thread-9",
+                subject: "Re: Devis site vitrine",
+                snippet: "Merci pour votre retour rapide. Nous validons le devis, pouvez-vous nous envoyer le planning de réalisation ?",
+                senderName: "Sophie Bernard",
+                senderEmail: "sophie.bernard@atelier-bernard.fr",
+                date: now.addingTimeInterval(-3600 * 70),
+                isUnread: true
+            ),
+            EmailCard(
+                id: "mock-10",
+                threadId: "thread-10",
+                subject: "Votre colis est disponible en point relais",
+                snippet: "Votre colis vous attend au point relais Tabac de la Gare. Il sera conservé 9 jours.",
+                senderName: "Mondial Relay",
+                senderEmail: "notification@mondialrelay.fr",
+                date: now.addingTimeInterval(-3600 * 80),
+                isUnread: false
+            ),
+            EmailCard(
+                id: "mock-11",
+                threadId: "thread-11",
+                subject: "Soirée jeux samedi ?",
+                snippet: "On organise une soirée jeux de société chez nous samedi à 20h. Dis-moi si tu viens, on prévoit à manger !",
+                senderName: "Thomas Leroy",
+                senderEmail: "thomas.leroy@gmail.com",
+                date: now.addingTimeInterval(-3600 * 90),
+                isUnread: true
+            ),
+            EmailCard(
+                id: "mock-12",
+                threadId: "thread-12",
+                subject: "Récapitulatif de votre semaine",
+                snippet: "Cette semaine vous avez parcouru 48 km et atteint votre objectif 5 jours sur 7. Bravo !",
+                senderName: "Podomètre",
+                senderEmail: "no-reply@podometre.app",
+                date: now.addingTimeInterval(-3600 * 100),
+                isUnread: false
+            ),
         ]
     }
 }
