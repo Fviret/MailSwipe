@@ -14,6 +14,9 @@ struct SettingsView: View {
                     if store.isMockMode {
                         Label("Mode démo actif", systemImage: "wand.and.stars")
                             .foregroundStyle(.orange)
+                        if Config.isGmailConfigured {
+                            Button("Quitter le mode démo") { store.exitMockPreview() }
+                        }
                     } else if auth.isSignedIn {
                         Button("Se déconnecter de Gmail", role: .destructive) {
                             auth.signOut()

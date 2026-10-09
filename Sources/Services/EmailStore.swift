@@ -19,7 +19,9 @@ final class EmailStore: ObservableObject {
     let snoozeScheduler: SnoozeScheduler
     private let gmailService: MailService
     private let mockService: MailService
-    private let archiveStorage: JSONFileStore<[EmailCard]>
+    private var archiveStorage: JSONFileStore<[EmailCard]>
+    private let storageRoot: URL
+    private let gmailConfigured: Bool
     static let archiveLimit = 200
     private var dueCheckTimer: Timer?
     private var hasLoadedOnce = false
@@ -30,12 +32,39 @@ final class EmailStore: ObservableObject {
     private var handledIds = Set<String>()
     static let prefetchThreshold = 5
 
-    var isMockMode: Bool { !Config.isGmailConfigured || forcedMockPreview }
+    var isMockMode: Bool { !gmailConfigured || forcedMockPreview }
 
     private var service: MailService { isMockMode ? mockService : gmailService }
 
+    /// Démo : mails fictifs, sans réseau ni compte. Les données locales sont isolées du compte réel.
     func enableMockPreview() {
         forcedMockPreview = true
+        resetSession()
+    }
+
+    func exitMockPreview() {
+        forcedMockPreview = false
+        resetSession()
+    }
+
+    private func resetSession() {
+        pending?.task?.cancel()
+        pending = nil
+        inbox = []
+        hasMore = false
+        nextPageToken = nil
+        hasLoadedOnce = false
+        errorMessage = nil
+        handledIds.removeAll()
+        bodyCache = [:]
+        let directory = storageDirectory()
+        archiveStorage = JSONFileStore(filename: "archive.json", directory: directory)
+        archived = archiveStorage.load() ?? []
+        snoozeScheduler.use(directory: directory)
+    }
+
+    private func storageDirectory() -> URL {
+        storageRoot.appendingPathComponent(isMockMode ? "demo" : "live", isDirectory: true)
     }
 
     let undoDelay: TimeInterval
@@ -46,16 +75,19 @@ final class EmailStore: ObservableObject {
         mock: MailService = MockMailService(),
         snoozeScheduler: SnoozeScheduler? = nil,
         undoDelay: TimeInterval = 4,
-        storageDirectory: URL? = nil
+        storageDirectory: URL? = nil,
+        gmailConfigured: Bool = Config.isGmailConfigured
     ) {
         self.undoDelay = undoDelay
         self.auth = auth
         self.gmailService = gmail ?? GmailAPI(auth: auth)
         self.mockService = mock
+        self.gmailConfigured = gmailConfigured
+        self.storageRoot = storageDirectory ?? JSONFileStore<Int>.defaultDirectory
         // Démo et compte réel ne partagent jamais leurs données locales.
-        let directory = storageDirectory
-            ?? JSONFileStore<Int>.defaultDirectory
-                .appendingPathComponent(Config.isGmailConfigured ? "live" : "demo", isDirectory: true)
+        let directory = self.storageRoot.appendingPathComponent(
+            (!gmailConfigured) ? "demo" : "live", isDirectory: true
+        )
         self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler(directory: directory)
         self.archiveStorage = JSONFileStore(filename: "archive.json", directory: directory)
         self.archived = archiveStorage.load() ?? []
