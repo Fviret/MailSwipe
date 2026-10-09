@@ -40,47 +40,47 @@ final class JSONFileStoreTests: XCTestCase {
 final class LocalDataTests: XCTestCase {
     func testArchiveSurvivesRestart() async {
         let dir = TestStorage.makeDirectory()
-        let first = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let first = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         await first.loadInbox()
         let card = first.inbox[0]
         await first.archive(card).value
 
-        let second = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let second = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         XCTAssertEqual(second.archived.first, card)
     }
 
     func testSnoozeSurvivesRestart() async {
         let dir = TestStorage.makeDirectory()
-        let first = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let first = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         await first.loadInbox()
         let card = first.inbox[0]
         await first.snooze(card, duration: .nextWeek).value
 
-        let second = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let second = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         XCTAssertEqual(second.snoozeScheduler.items.first?.card, card)
     }
 
     func testClearLocalDataWipesArchiveAndSnoozeOnDisk() async {
         let dir = TestStorage.makeDirectory()
-        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         await store.loadInbox()
         await store.archive(store.inbox[0]).value
         await store.snooze(store.inbox[0], duration: .nextWeek).value
         store.clearLocalData()
 
-        let reopened = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let reopened = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         XCTAssertTrue(reopened.archived.isEmpty)
         XCTAssertTrue(reopened.snoozeScheduler.items.isEmpty)
     }
 
     func testArchiveIsCapped() {
         let dir = TestStorage.makeDirectory()
-        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         let card = MockData.inbox()[0]
         store.archived = (0..<(EmailStore.archiveLimit + 25)).map {
             var c = card; c = EmailCard(id: "id-\($0)", threadId: c.threadId, subject: c.subject, snippet: c.snippet, senderName: c.senderName, senderEmail: c.senderEmail, date: c.date, isUnread: c.isUnread); return c
         }
-        let reopened = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir)
+        let reopened = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: dir, notifications: RecordingNotifications())
         XCTAssertEqual(reopened.archived.count, EmailStore.archiveLimit)
     }
 

@@ -8,7 +8,7 @@ final class UndoTests: XCTestCase {
 
     override func setUp() async throws {
         spy = SpyMailService()
-        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 60, storageDirectory: TestStorage.makeDirectory())
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 60, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
     }
 
@@ -83,7 +83,7 @@ final class UndoTests: XCTestCase {
 final class SnoozeResurfaceTests: XCTestCase {
     func testDueSnoozedMailReturnsToTopOfInboxAndIsRestoredInGmail() async {
         let spy = SpyMailService()
-        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
         let card = store.inbox[3]
         await store.snooze(card, duration: .oneHour).value
@@ -100,7 +100,7 @@ final class SnoozeResurfaceTests: XCTestCase {
 
     func testReloadDoesNotSwallowAMailThatBecameDue() async {
         let spy = SpyMailService()
-        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
         let card = store.inbox[0]
         await store.snooze(card, duration: .oneHour).value

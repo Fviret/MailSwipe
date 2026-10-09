@@ -5,7 +5,7 @@ import XCTest
 final class DemoModeTests: XCTestCase {
     private func makeStore(configured: Bool, live: SpyMailService? = nil, demo: SpyMailService = SpyMailService(), dir: URL = TestStorage.makeDirectory()) -> (EmailStore, AuthManager) {
         let auth = AuthManager()
-        let store = EmailStore(auth: auth, gmail: live, mock: demo, undoDelay: 0, storageDirectory: dir, gmailConfigured: configured)
+        let store = EmailStore(auth: auth, gmail: live, mock: demo, undoDelay: 0, storageDirectory: dir, gmailConfigured: configured, notifications: RecordingNotifications())
         return (store, auth)
     }
 

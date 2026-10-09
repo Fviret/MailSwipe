@@ -8,7 +8,7 @@ final class RollbackTests: XCTestCase {
 
     override func setUp() async throws {
         spy = SpyMailService()
-        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
     }
 
