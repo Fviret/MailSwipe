@@ -5,6 +5,7 @@ struct CardStackView: View {
 
     @State private var pendingReply: EmailCard?
     @State private var pendingSnooze: EmailCard?
+    @State private var noReplyCard: EmailCard?
     @State private var resetTokens: [String: Int] = [:]
 
     private let maxVisible = 3
@@ -53,6 +54,14 @@ struct CardStackView: View {
                 pendingReply = nil
             }
         }
+        .alert(
+            "Impossible de répondre",
+            isPresented: Binding(get: { noReplyCard != nil }, set: { if !$0 { noReplyCard = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("\(noReplyCard?.senderName ?? "Cet expéditeur") utilise une adresse « ne pas répondre ».")
+        }
         .sheet(item: $pendingSnooze) { card in
             SnoozePickerSheet { duration in
                 store.snooze(card, duration: duration)
@@ -80,7 +89,12 @@ struct CardStackView: View {
     private func handleCommit(card: EmailCard, direction: SwipeDirection) {
         switch direction {
         case .right:
-            pendingReply = card
+            if ReplyBuilder.canReply(card) {
+                pendingReply = card
+            } else {
+                resetTokens[card.id, default: 0] += 1
+                noReplyCard = card
+            }
         case .left:
             store.delete(card)
         case .up:

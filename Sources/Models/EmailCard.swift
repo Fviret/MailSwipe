@@ -9,6 +9,10 @@ struct EmailCard: Identifiable, Equatable, Codable {
     var senderEmail: String
     var date: Date
     var isUnread: Bool
+    /// En-têtes utiles pour répondre dans le bon fil de discussion.
+    var messageIdHeader: String? = nil
+    var references: String? = nil
+    var replyTo: String? = nil
 
     static func == (lhs: EmailCard, rhs: EmailCard) -> Bool {
         lhs.id == rhs.id

@@ -72,6 +72,9 @@ final class GmailAPI: MailService {
             URLQueryItem(name: "metadataHeaders", value: "Subject"),
             URLQueryItem(name: "metadataHeaders", value: "From"),
             URLQueryItem(name: "metadataHeaders", value: "Date"),
+            URLQueryItem(name: "metadataHeaders", value: "Message-ID"),
+            URLQueryItem(name: "metadataHeaders", value: "References"),
+            URLQueryItem(name: "metadataHeaders", value: "Reply-To"),
         ]
         let data = try await get(components.url!)
         let message = try JSONDecoder().decode(MessageDetail.self, from: data)
@@ -114,7 +117,7 @@ final class GmailAPI: MailService {
     }
 
     func sendReply(to card: EmailCard, body text: String) async throws {
-        let raw = Self.buildMIMEReply(to: card, bodyText: text)
+        let raw = try ReplyBuilder.rawMessage(for: card, body: text)
         let payload = try JSONEncoder().encode(SendRequest(raw: raw, threadId: card.threadId))
         _ = try await post(baseURL.appendingPathComponent("messages/send"), body: payload)
     }
@@ -156,22 +159,6 @@ final class GmailAPI: MailService {
             return data
         }
         throw GmailError.sessionExpired
-    }
-
-    private static func buildMIMEReply(to card: EmailCard, bodyText: String) -> String {
-        let subject = card.subject.hasPrefix("Re:") ? card.subject : "Re: \(card.subject)"
-        let message = """
-        To: \(card.senderEmail)
-        Subject: \(subject)
-        Content-Type: text/plain; charset="UTF-8"
-
-        \(bodyText)
-        """
-        let data = Data(message.utf8)
-        return data.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
     }
 }
 
@@ -240,7 +227,10 @@ private struct MessageDetail: Decodable {
             senderName: name,
             senderEmail: email,
             date: Self.parseDate(header("Date")),
-            isUnread: labelIds?.contains("UNREAD") ?? false
+            isUnread: labelIds?.contains("UNREAD") ?? false,
+            messageIdHeader: header("Message-ID"),
+            references: header("References"),
+            replyTo: header("Reply-To")
         )
     }
 
