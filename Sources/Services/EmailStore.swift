@@ -4,7 +4,9 @@ import Combine
 @MainActor
 final class EmailStore: ObservableObject {
     @Published var inbox: [EmailCard] = []
-    @Published var archived: [EmailCard] = []
+    @Published var archived: [EmailCard] = [] {
+        didSet { archiveStorage.save(Array(archived.prefix(Self.archiveLimit))) }
+    }
     @Published var isLoading = false
     @Published var errorMessage: String?
     /// Action en attente : elle n'est envoyée au serveur qu'après `undoDelay`, sauf si on l'annule.
@@ -17,6 +19,8 @@ final class EmailStore: ObservableObject {
     let snoozeScheduler: SnoozeScheduler
     private let gmailService: MailService
     private let mockService: MailService
+    private let archiveStorage: JSONFileStore<[EmailCard]>
+    static let archiveLimit = 200
     private var dueCheckTimer: Timer?
     private var hasLoadedOnce = false
     private var nextPageToken: String?
@@ -40,13 +44,20 @@ final class EmailStore: ObservableObject {
         gmail: MailService? = nil,
         mock: MailService = MockMailService(),
         snoozeScheduler: SnoozeScheduler? = nil,
-        undoDelay: TimeInterval = 4
+        undoDelay: TimeInterval = 4,
+        storageDirectory: URL? = nil
     ) {
         self.undoDelay = undoDelay
         self.auth = auth
         self.gmailService = gmail ?? GmailAPI(auth: auth)
         self.mockService = mock
-        self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler()
+        // Démo et compte réel ne partagent jamais leurs données locales.
+        let directory = storageDirectory
+            ?? JSONFileStore<Int>.defaultDirectory
+                .appendingPathComponent(Config.isGmailConfigured ? "live" : "demo", isDirectory: true)
+        self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler(directory: directory)
+        self.archiveStorage = JSONFileStore(filename: "archive.json", directory: directory)
+        self.archived = archiveStorage.load() ?? []
         startDueCheckTimer()
     }
 
@@ -210,6 +221,17 @@ final class EmailStore: ObservableObject {
         }
     }
 
+    /// Efface les données locales d'un compte (archive et mails snoozés), à la déconnexion.
+    func clearLocalData() {
+        pending?.task?.cancel()
+        pending = nil
+        archived = []
+        archiveStorage.delete()
+        snoozeScheduler.removeAll()
+        inbox = []
+        hasLoadedOnce = false
+    }
+
     // MARK: - Réapparition des mails snoozés
 
     private func startDueCheckTimer() {
@@ -222,7 +244,7 @@ final class EmailStore: ObservableObject {
         let due = snoozeScheduler.popDueItems()
         guard !due.isEmpty else { return }
         for item in due {
-            let card = item.card.asEmailCard(id: item.id)
+            let card = item.card
             if !inbox.contains(where: { $0.id == card.id }) {
                 inbox.insert(card, at: 0)
             }

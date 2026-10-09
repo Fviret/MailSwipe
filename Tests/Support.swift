@@ -27,3 +27,11 @@ final class SpyMailService: MailService, @unchecked Sendable {
     func unsnooze(messageId: String) async throws { try record("unsnooze:\(messageId)") }
     func sendReply(to card: EmailCard, body: String) async throws { try record("reply:\(card.id)") }
 }
+
+enum TestStorage {
+    static func makeDirectory() -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("mailswipe-tests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+}

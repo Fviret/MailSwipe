@@ -7,15 +7,13 @@ final class UndoTests: XCTestCase {
     private var store: EmailStore!
 
     override func setUp() async throws {
-        UserDefaults.standard.removeObject(forKey: "mailswipe.snoozed")
         spy = SpyMailService()
-        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 60)
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 60, storageDirectory: TestStorage.makeDirectory())
         await store.loadInbox()
     }
 
     override func tearDown() async throws {
         store.undo()
-        UserDefaults.standard.removeObject(forKey: "mailswipe.snoozed")
     }
 
     private func serverCalls() -> [String] { spy.calls.filter { !$0.hasPrefix("fetchInbox") } }

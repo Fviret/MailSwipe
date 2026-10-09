@@ -7,14 +7,12 @@ final class RollbackTests: XCTestCase {
     private var store: EmailStore!
 
     override func setUp() async throws {
-        UserDefaults.standard.removeObject(forKey: "mailswipe.snoozed")
         spy = SpyMailService()
-        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0)
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
         await store.loadInbox()
     }
 
     override func tearDown() async throws {
-        UserDefaults.standard.removeObject(forKey: "mailswipe.snoozed")
     }
 
     func testDeleteFailureRestoresCardAtSamePosition() async {

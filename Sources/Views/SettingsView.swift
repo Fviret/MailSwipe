@@ -17,6 +17,7 @@ struct SettingsView: View {
                     } else if auth.isSignedIn {
                         Button("Se déconnecter de Gmail", role: .destructive) {
                             auth.signOut()
+                            store.clearLocalData()
                         }
                     } else {
                         Button("Se connecter à Gmail") {

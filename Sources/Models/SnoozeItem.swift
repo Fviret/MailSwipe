@@ -2,42 +2,8 @@ import Foundation
 
 struct SnoozeItem: Identifiable, Codable, Equatable {
     let id: String
-    let card: SnoozedCardData
+    let card: EmailCard
     let wakeAt: Date
-}
-
-/// Version codable de EmailCard (pour la persistance locale des mails snoozés).
-struct SnoozedCardData: Codable, Equatable {
-    let threadId: String
-    let subject: String
-    let snippet: String
-    let senderName: String
-    let senderEmail: String
-    let date: Date
-    let isUnread: Bool
-
-    init(from card: EmailCard) {
-        threadId = card.threadId
-        subject = card.subject
-        snippet = card.snippet
-        senderName = card.senderName
-        senderEmail = card.senderEmail
-        date = card.date
-        isUnread = card.isUnread
-    }
-
-    func asEmailCard(id: String) -> EmailCard {
-        EmailCard(
-            id: id,
-            threadId: threadId,
-            subject: subject,
-            snippet: snippet,
-            senderName: senderName,
-            senderEmail: senderEmail,
-            date: date,
-            isUnread: isUnread
-        )
-    }
 }
 
 enum SnoozeDuration: CaseIterable, Identifiable {
