@@ -1,6 +1,6 @@
 import Foundation
 
-struct EmailCard: Identifiable, Equatable {
+struct EmailCard: Identifiable, Equatable, Codable {
     let id: String
     let threadId: String
     var subject: String

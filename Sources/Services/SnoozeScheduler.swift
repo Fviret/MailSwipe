@@ -8,14 +8,15 @@ import UserNotifications
 final class SnoozeScheduler: ObservableObject {
     @Published private(set) var items: [SnoozeItem] = []
 
-    private let storageKey = "mailswipe.snoozed"
+    private let storage: JSONFileStore<[SnoozeItem]>
 
-    init() {
-        load()
+    init(directory: URL? = nil) {
+        storage = JSONFileStore(filename: "snoozed.json", directory: directory)
+        items = storage.load() ?? []
     }
 
     func snooze(_ card: EmailCard, until date: Date) {
-        let item = SnoozeItem(id: card.id, card: SnoozedCardData(from: card), wakeAt: date)
+        let item = SnoozeItem(id: card.id, card: card, wakeAt: date)
         items.removeAll { $0.id == card.id }
         items.append(item)
         save()
@@ -48,8 +49,9 @@ final class SnoozeScheduler: ObservableObject {
 
     private func scheduleNotification(for item: SnoozeItem) {
         let content = UNMutableNotificationContent()
-        content.title = "📬 De retour : \(item.card.senderName)"
-        content.body = item.card.subject
+        // Volontairement générique : l'expéditeur et l'objet ne doivent pas s'afficher sur l'écran verrouillé.
+        content.title = "📬 Un mail snoozé est de retour"
+        content.body = "Ouvre MailSwipe pour le traiter." 
         content.sound = .default
 
         let interval = max(item.wakeAt.timeIntervalSinceNow, 1)
@@ -58,16 +60,15 @@ final class SnoozeScheduler: ObservableObject {
         UNUserNotificationCenter.current().add(request)
     }
 
-    private func save() {
-        if let data = try? JSONEncoder().encode(items) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-        }
+    /// Efface tous les mails snoozés (déconnexion).
+    func removeAll() {
+        let ids = items.map(\.id)
+        items = []
+        storage.delete()
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
-    private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([SnoozeItem].self, from: data)
-        else { return }
-        items = decoded
+    private func save() {
+        storage.save(items)
     }
 }
