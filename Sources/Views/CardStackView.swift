@@ -32,6 +32,7 @@ struct CardStackView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(store.inbox.isEmpty)
+                .accessibilityIdentifier("legend.\(direction.identifier)")
                 .accessibilityLabel(Text(direction.actionTitle))
                 .accessibilityHint(Text("Applique cette action au mail affiché"))
             }
@@ -158,6 +159,7 @@ private struct UndoToast: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             Button("undo_button", action: onUndo)
+                .accessibilityIdentifier("undo.button")
                 .bold()
                 .foregroundStyle(.yellow)
         }
@@ -179,8 +181,7 @@ private struct UndoToast: View {
             withAnimation(.linear(duration: action.delay)) { remaining = 0 }
             AccessibilityNotification.Announcement(String(localized: "\(message). Annulation possible.")).post()
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityElement(children: .contain)
     }
 
     private var message: String {

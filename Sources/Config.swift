@@ -22,8 +22,10 @@ enum Config {
     static let googleOAuthClientID = "YOUR_CLIENT_ID.apps.googleusercontent.com"
 
     /// Dérivé automatiquement : "123456789-abcxyz" à partir du Client ID.
-    static var reversedClientIDScheme: String {
-        guard let prefix = googleOAuthClientID.split(separator: ".").first else {
+    static var reversedClientIDScheme: String { reversedScheme(forClientID: googleOAuthClientID) }
+
+    static func reversedScheme(forClientID clientID: String) -> String {
+        guard let prefix = clientID.split(separator: ".").first, !prefix.isEmpty else {
             return "mailswipe.oauth"
         }
         return "com.googleusercontent.apps.\(prefix)"
@@ -42,7 +44,9 @@ enum Config {
 
     /// Tant que le Client ID n'a pas été renseigné, l'app tourne en mode démo
     /// avec des mails fictifs — pratique pour tester le swipe sans compte Gmail.
-    static var isGmailConfigured: Bool {
-        googleOAuthClientID != "YOUR_CLIENT_ID.apps.googleusercontent.com" && !googleOAuthClientID.isEmpty
+    static var isGmailConfigured: Bool { isConfigured(clientID: googleOAuthClientID) }
+
+    static func isConfigured(clientID: String) -> Bool {
+        clientID != "YOUR_CLIENT_ID.apps.googleusercontent.com" && !clientID.isEmpty
     }
 }

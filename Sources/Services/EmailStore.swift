@@ -25,6 +25,7 @@ final class EmailStore: ObservableObject {
     static let archiveLimit = 200
     private var dueCheckTimer: Timer?
     private var hasLoadedOnce = false
+    private var cancellables = Set<AnyCancellable>()
     private var nextPageToken: String?
     private var loadGeneration = 0
     private var bodyCache: [String: String] = [:]
@@ -92,6 +93,10 @@ final class EmailStore: ObservableObject {
         self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler(directory: directory, notifications: notifications)
         self.archiveStorage = JSONFileStore(filename: "archive.json", directory: directory)
         self.archived = archiveStorage.load() ?? []
+        // Les vues lisent `store.snoozeScheduler.items` : sans ce relais elles ne se rafraîchissent jamais.
+        self.snoozeScheduler.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
         startDueCheckTimer()
     }
 

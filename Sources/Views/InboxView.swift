@@ -38,6 +38,7 @@ struct InboxView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                     .disabled(store.isLoading)
+                    .accessibilityIdentifier("inbox.refresh")
                     .accessibilityLabel(Text("Actualiser"))
                 }
             }

@@ -4,7 +4,9 @@ enum MockData {
     /// Les mails de démonstration suivent la langue de l'interface.
     static var isFrench: Bool { Bundle.main.preferredLocalizations.first == "fr" }
 
-    static func inbox() -> [EmailCard] { isFrench ? frenchInbox() : englishInbox() }
+    static func inbox() -> [EmailCard] { inbox(french: isFrench) }
+
+    static func inbox(french: Bool) -> [EmailCard] { french ? frenchInbox() : englishInbox() }
 
     private static func frenchInbox() -> [EmailCard] {
         let now = Date()
@@ -155,8 +157,10 @@ enum MockData {
     }
 
     /// Corps complets des mails de démo (pour l'écran de lecture).
-    static func body(for id: String) -> String {
-        isFrench ? frenchBody(for: id) : englishBody(for: id)
+    static func body(for id: String) -> String { body(for: id, french: isFrench) }
+
+    static func body(for id: String, french: Bool) -> String {
+        french ? frenchBody(for: id) : englishBody(for: id)
     }
 
     private static func englishBody(for id: String) -> String {
@@ -189,7 +193,7 @@ enum MockData {
             Bernard Studio
             """
         default:
-            let card = inbox().first { $0.id == id }
+            let card = inbox(french: false).first { $0.id == id }
             return (card?.snippet ?? "")
                 + "\n\nThis is a demo email: the full content of a real Gmail message appears here."
         }
@@ -225,7 +229,7 @@ enum MockData {
             Atelier Bernard
             """
         default:
-            let card = inbox().first { $0.id == id }
+            let card = inbox(french: true).first { $0.id == id }
             return (card?.snippet ?? "")
                 + "\n\nCeci est un mail de démonstration : le contenu complet d'un vrai mail Gmail s'affiche ici."
         }

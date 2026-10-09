@@ -52,11 +52,27 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.floviret.mailswipe.tests
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: YES
+  MailSwipeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: MailSwipe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.floviret.mailswipe.uitests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   MailSwipe:
     build:
       targets:
         MailSwipe: all
     test:
+      gatherCoverageData: true
+      coverageTargets:
+        - MailSwipe
       targets:
         - MailSwipeTests
+        - MailSwipeUITests

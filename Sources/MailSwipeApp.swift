@@ -6,9 +6,23 @@ struct MailSwipeApp: App {
     @StateObject private var store: EmailStore
 
     init() {
-        let authManager = AuthManager()
-        _auth = StateObject(wrappedValue: authManager)
-        _store = StateObject(wrappedValue: EmailStore(auth: authManager))
+        if LaunchOptions.isUITesting {
+            let authManager = AuthManager(refreshTokenKey: "ui-testing-refresh-token")
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("mailswipe-ui-\(UUID().uuidString)", isDirectory: true)
+            _auth = StateObject(wrappedValue: authManager)
+            _store = StateObject(wrappedValue: EmailStore(
+                auth: authManager,
+                undoDelay: LaunchOptions.undoDelay,
+                storageDirectory: directory,
+                gmailConfigured: LaunchOptions.simulatesGmailConfigured,
+                notifications: NoopNotificationScheduler()
+            ))
+        } else {
+            let authManager = AuthManager()
+            _auth = StateObject(wrappedValue: authManager)
+            _store = StateObject(wrappedValue: EmailStore(auth: authManager))
+        }
     }
 
     @Environment(\.scenePhase) private var scenePhase

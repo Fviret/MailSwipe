@@ -31,6 +31,8 @@ struct SnoozedListView: View {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(.secondary)
                             }
+                            .accessibilityLabel(Text("Retirer des snoozés"))
+                            .accessibilityIdentifier("snoozed.remove")
                         }
                         .padding(.vertical, 4)
                     }
