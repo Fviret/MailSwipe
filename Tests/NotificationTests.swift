@@ -64,3 +64,28 @@ final class NotificationTests: XCTestCase {
         XCTAssertTrue(scheduler.items.isEmpty)
     }
 }
+
+@MainActor
+final class LaunchPermissionTests: XCTestCase {
+    /// La permission de notification ne doit être demandée qu'au premier snooze, jamais au lancement.
+    func testNoPermissionRequestedByLaunchLoadingOrModeSwitch() async {
+        let notifications = RecordingNotifications()
+        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: notifications)
+        await store.loadInbox()
+        await store.loadInbox(force: true)
+        store.resurfaceDueSnoozes()
+        store.enableMockPreview()
+        store.exitMockPreview()
+        await store.archive(store.inbox.first ?? MockData.inbox()[0]).value
+        XCTAssertEqual(notifications.permissionRequests, 0)
+    }
+
+    func testFirstSnoozeRequestsPermissionExactlyThroughTheScheduler() async {
+        let notifications = RecordingNotifications()
+        let store = EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: notifications)
+        await store.loadInbox()
+        await store.snooze(store.inbox[0], duration: .oneHour).value
+        XCTAssertEqual(notifications.permissionRequests, 1)
+        XCTAssertEqual(notifications.scheduled.count, 1)
+    }
+}
