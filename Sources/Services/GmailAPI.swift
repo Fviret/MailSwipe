@@ -2,11 +2,21 @@ import Foundation
 
 /// Client minimal pour l'API REST Gmail (users.messages.*).
 final class GmailAPI: MailService {
-    private let auth: AuthManager
-    private let baseURL = URL(string: "https://gmail.googleapis.com/gmail/v1/users/me")!
+    static let snoozeLabelName = "MailSwipe/Snoozed"
 
-    init(auth: AuthManager) {
+    private let auth: AccessTokenProviding
+    private let session: URLSession
+    private let baseURL: URL
+    private let snoozeLabel = LabelCache()
+
+    init(
+        auth: AccessTokenProviding,
+        session: URLSession = .shared,
+        baseURL: URL = URL(string: "https://gmail.googleapis.com/gmail/v1/users/me")!
+    ) {
         self.auth = auth
+        self.session = session
+        self.baseURL = baseURL
     }
 
     func fetchInbox(pageToken: String?) async throws -> MailPage {
@@ -77,15 +87,30 @@ final class GmailAPI: MailService {
         _ = try await post(baseURL.appendingPathComponent("messages/\(messageId)/modify"), body: body)
     }
 
+    /// Gmail n'a pas d'API de snooze : le mail quitte la boîte de réception mais reste retrouvable
+    /// dans le libellé « MailSwipe/Snoozed » (jamais « perdu » dans Tous les messages).
     func snooze(messageId: String) async throws {
-        // Retire simplement le mail de la boîte de réception ; SnoozeScheduler
-        // se charge de le refaire réapparaître côté client à l'heure choisie.
-        try await archive(messageId: messageId)
+        let labelId = try await snoozeLabelId()
+        let body = try JSONEncoder().encode(ModifyRequest(removeLabelIds: ["INBOX"], addLabelIds: [labelId]))
+        _ = try await post(baseURL.appendingPathComponent("messages/\(messageId)/modify"), body: body)
     }
 
     func unsnooze(messageId: String) async throws {
-        let body = try JSONEncoder().encode(ModifyRequest(removeLabelIds: [], addLabelIds: ["INBOX"]))
+        let labelId = try await snoozeLabelId()
+        let body = try JSONEncoder().encode(ModifyRequest(removeLabelIds: [labelId], addLabelIds: ["INBOX"]))
         _ = try await post(baseURL.appendingPathComponent("messages/\(messageId)/modify"), body: body)
+    }
+
+    private func snoozeLabelId() async throws -> String {
+        try await snoozeLabel.id {
+            let listData = try await self.get(self.baseURL.appendingPathComponent("labels"))
+            let labels = try JSONDecoder().decode(LabelListResponse.self, from: listData).labels ?? []
+            if let existing = labels.first(where: { $0.name == Self.snoozeLabelName }) { return existing.id }
+
+            let payload = try JSONEncoder().encode(CreateLabelRequest(name: Self.snoozeLabelName))
+            let created = try await self.post(self.baseURL.appendingPathComponent("labels"), body: payload)
+            return try JSONDecoder().decode(LabelResponse.self, from: created).id
+        }
     }
 
     func sendReply(to card: EmailCard, body text: String) async throws {
@@ -119,7 +144,7 @@ final class GmailAPI: MailService {
     private func perform(_ makeRequest: (String) -> URLRequest) async throws -> Data {
         for attempt in 0..<2 {
             let token = try await auth.validAccessToken()
-            let (data, response) = try await URLSession.shared.data(for: makeRequest(token))
+            let (data, response) = try await session.data(for: makeRequest(token))
             if (response as? HTTPURLResponse)?.statusCode == 401 {
                 if attempt == 0 {
                     await auth.invalidateAccessToken()
@@ -156,6 +181,27 @@ private struct MessageListResponse: Decodable {
     struct Item: Decodable { let id: String }
     let messages: [Item]?
     let nextPageToken: String?
+}
+
+/// Mémorise l'identifiant du libellé de snooze pour ne le chercher/créer qu'une fois.
+private actor LabelCache {
+    private var cached: String?
+
+    func id(resolve: () async throws -> String) async throws -> String {
+        if let cached { return cached }
+        let resolved = try await resolve()
+        cached = resolved
+        return resolved
+    }
+}
+
+private struct LabelResponse: Decodable { let id: String; let name: String? }
+private struct LabelListResponse: Decodable { let labels: [LabelResponse]? }
+
+private struct CreateLabelRequest: Encodable {
+    let name: String
+    let labelListVisibility = "labelShow"
+    let messageListVisibility = "show"
 }
 
 private struct ModifyRequest: Encodable {

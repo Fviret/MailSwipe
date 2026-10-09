@@ -82,6 +82,7 @@ final class EmailStore: ObservableObject {
             handledIds.removeAll()
             inbox = page.cards
             apply(page)
+            resurfaceDueSnoozes()
         } catch {
             guard generation == loadGeneration else { return }
             errorMessage = "Impossible de charger la boîte de réception : \(error.localizedDescription)"

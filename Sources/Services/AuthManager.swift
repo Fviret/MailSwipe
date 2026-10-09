@@ -3,8 +3,15 @@ import AuthenticationServices
 import CryptoKit
 import UIKit
 
+/// Ce dont l'API Gmail a besoin d'une session : un jeton valide, et de quoi réagir à un refus.
+protocol AccessTokenProviding: AnyObject {
+    func validAccessToken() async throws -> String
+    func invalidateAccessToken() async
+    func handleSessionExpired() async
+}
+
 @MainActor
-final class AuthManager: NSObject, ObservableObject {
+final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
     @Published var isSignedIn = false
     @Published var userEmail: String?
     @Published var lastError: String?
