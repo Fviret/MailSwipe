@@ -11,12 +11,15 @@ final class EmailStore: ObservableObject {
     @Published private var forcedMockPreview = false
 
     let auth: AuthManager
-    let snoozeScheduler = SnoozeScheduler()
-    private var api: GmailAPI?
+    let snoozeScheduler: SnoozeScheduler
+    private let gmailService: MailService
+    private let mockService: MailService
     private var dueCheckTimer: Timer?
     private var hasLoadedOnce = false
 
     var isMockMode: Bool { !Config.isGmailConfigured || forcedMockPreview }
+
+    private var service: MailService { isMockMode ? mockService : gmailService }
 
     func enableMockPreview() {
         forcedMockPreview = true
@@ -28,9 +31,16 @@ final class EmailStore: ObservableObject {
         let direction: SwipeDirection
     }
 
-    init(auth: AuthManager) {
+    init(
+        auth: AuthManager,
+        gmail: MailService? = nil,
+        mock: MailService = MockMailService(),
+        snoozeScheduler: SnoozeScheduler? = nil
+    ) {
         self.auth = auth
-        self.api = GmailAPI(auth: auth)
+        self.gmailService = gmail ?? GmailAPI(auth: auth)
+        self.mockService = mock
+        self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler()
         startDueCheckTimer()
     }
 
@@ -44,13 +54,9 @@ final class EmailStore: ObservableObject {
         errorMessage = nil
         defer { isLoading = false; hasLoadedOnce = true }
 
-        if isMockMode {
-            inbox = MockData.inbox()
-            return
-        }
-        guard auth.isSignedIn, let api else { return }
+        guard isMockMode || auth.isSignedIn else { return }
         do {
-            inbox = try await api.fetchInbox()
+            inbox = try await service.fetchInbox()
         } catch {
             errorMessage = "Impossible de charger la boîte de réception : \(error.localizedDescription)"
         }
@@ -61,9 +67,9 @@ final class EmailStore: ObservableObject {
     func reply(_ card: EmailCard, text: String) {
         remove(card)
         lastAction = LastAction(card: card, direction: .right)
-        guard !isMockMode, let api else { return }
+        let service = self.service
         Task {
-            do { try await api.sendReply(to: card, body: text) }
+            do { try await service.sendReply(to: card, body: text) }
             catch { errorMessage = "Échec de l'envoi : \(error.localizedDescription)" }
         }
     }
@@ -71,9 +77,9 @@ final class EmailStore: ObservableObject {
     func delete(_ card: EmailCard) {
         remove(card)
         lastAction = LastAction(card: card, direction: .left)
-        guard !isMockMode, let api else { return }
+        let service = self.service
         Task {
-            do { try await api.trash(messageId: card.id) }
+            do { try await service.trash(messageId: card.id) }
             catch { errorMessage = "Échec de la suppression : \(error.localizedDescription)" }
         }
     }
@@ -82,9 +88,9 @@ final class EmailStore: ObservableObject {
         remove(card)
         archived.insert(card, at: 0)
         lastAction = LastAction(card: card, direction: .up)
-        guard !isMockMode, let api else { return }
+        let service = self.service
         Task {
-            do { try await api.archive(messageId: card.id) }
+            do { try await service.archive(messageId: card.id) }
             catch { errorMessage = "Échec de l'archivage : \(error.localizedDescription)" }
         }
     }
@@ -93,9 +99,9 @@ final class EmailStore: ObservableObject {
         remove(card)
         snoozeScheduler.snooze(card, until: duration.resolvedDate())
         lastAction = LastAction(card: card, direction: .down)
-        guard !isMockMode, let api else { return }
+        let service = self.service
         Task {
-            do { try await api.snoozeAway(messageId: card.id) }
+            do { try await service.snooze(messageId: card.id) }
             catch { errorMessage = "Échec du snooze : \(error.localizedDescription)" }
         }
     }
@@ -121,9 +127,9 @@ final class EmailStore: ObservableObject {
                 inbox.insert(card, at: 0)
             }
         }
-        guard !isMockMode, let api else { return }
+        let service = self.service
         for item in due {
-            Task { try? await api.unsnooze(messageId: item.id) }
+            Task { try? await service.unsnooze(messageId: item.id) }
         }
     }
 }

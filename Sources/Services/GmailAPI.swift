@@ -1,7 +1,7 @@
 import Foundation
 
 /// Client minimal pour l'API REST Gmail (users.messages.*).
-final class GmailAPI {
+final class GmailAPI: MailService {
     private let auth: AuthManager
     private let baseURL = URL(string: "https://gmail.googleapis.com/gmail/v1/users/me")!
 
@@ -9,7 +9,11 @@ final class GmailAPI {
         self.auth = auth
     }
 
-    func fetchInbox(maxResults: Int = 20) async throws -> [EmailCard] {
+    func fetchInbox() async throws -> [EmailCard] {
+        try await fetchInbox(maxResults: 20)
+    }
+
+    private func fetchInbox(maxResults: Int) async throws -> [EmailCard] {
         var components = URLComponents(url: baseURL.appendingPathComponent("messages"), resolvingAgainstBaseURL: false)!
         components.queryItems = [
             URLQueryItem(name: "maxResults", value: String(maxResults)),
@@ -54,7 +58,7 @@ final class GmailAPI {
         _ = try await post(baseURL.appendingPathComponent("messages/\(messageId)/modify"), body: body)
     }
 
-    func snoozeAway(messageId: String) async throws {
+    func snooze(messageId: String) async throws {
         // Retire simplement le mail de la boîte de réception ; SnoozeScheduler
         // se charge de le refaire réapparaître côté client à l'heure choisie.
         try await archive(messageId: messageId)
