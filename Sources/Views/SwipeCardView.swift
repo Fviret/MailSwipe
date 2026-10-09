@@ -5,25 +5,41 @@ import SwiftUI
 struct SwipeCardView<Content: View>: View {
     let content: Content
     let onCommit: (SwipeDirection) -> Void
+    var onTap: (() -> Void)?
 
     @State private var offset: CGSize = .zero
     @State private var isDragging = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let commitDistance: CGFloat = 130
     private let commitVelocity: CGFloat = 700
 
-    init(@ViewBuilder content: () -> Content, onCommit: @escaping (SwipeDirection) -> Void) {
+    init(
+        @ViewBuilder content: () -> Content,
+        onCommit: @escaping (SwipeDirection) -> Void,
+        onTap: (() -> Void)? = nil
+    ) {
         self.content = content()
         self.onCommit = onCommit
+        self.onTap = onTap
     }
 
     var body: some View {
         content
             .overlay(alignment: .topLeading) { hintBadge }
-            .rotationEffect(.degrees(Double(offset.width / 20)))
+            .rotationEffect(.degrees(reduceMotion ? 0 : Double(offset.width / 20)))
             .offset(offset)
-            .scaleEffect(isDragging ? 1.03 : 1.0)
+            .scaleEffect(isDragging && !reduceMotion ? 1.03 : 1.0)
+            .onTapGesture { onTap?() }
             .gesture(dragGesture)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(Text("Touchez deux fois pour lire le mail. Balayez vers le haut ou le bas pour les actions : répondre, supprimer, archiver ou snoozer."))
+            .accessibilityAction(.default) { onTap?() }
+            .accessibilityAction(named: Text(SwipeDirection.right.actionTitle)) { onCommit(.right) }
+            .accessibilityAction(named: Text(SwipeDirection.left.actionTitle)) { onCommit(.left) }
+            .accessibilityAction(named: Text(SwipeDirection.up.actionTitle)) { onCommit(.up) }
+            .accessibilityAction(named: Text(SwipeDirection.down.actionTitle)) { onCommit(.down) }
             .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.85), value: isDragging)
     }
 
@@ -85,7 +101,7 @@ struct SwipeCardView<Content: View>: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(color(for: direction).opacity(0.9), in: Capsule())
+            .background(direction.color.opacity(0.9), in: Capsule())
             .foregroundStyle(.white)
             .padding(18)
             .opacity(min(1, progress))
@@ -106,14 +122,5 @@ struct SwipeCardView<Content: View>: View {
     private var progress: Double {
         let distance = max(abs(offset.width), abs(offset.height))
         return Double(distance / commitDistance)
-    }
-
-    private func color(for direction: SwipeDirection) -> Color {
-        switch direction {
-        case .right: return .green
-        case .left: return .red
-        case .up: return .blue
-        case .down: return .purple
-        }
     }
 }

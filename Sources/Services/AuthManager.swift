@@ -3,8 +3,15 @@ import AuthenticationServices
 import CryptoKit
 import UIKit
 
+/// Ce dont l'API Gmail a besoin d'une session : un jeton valide, et de quoi réagir à un refus.
+protocol AccessTokenProviding: AnyObject {
+    func validAccessToken() async throws -> String
+    func invalidateAccessToken() async
+    func handleSessionExpired() async
+}
+
 @MainActor
-final class AuthManager: NSObject, ObservableObject {
+final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
     @Published var isSignedIn = false
     @Published var userEmail: String?
     @Published var lastError: String?
@@ -12,6 +19,7 @@ final class AuthManager: NSObject, ObservableObject {
     private var accessToken: String?
     private var accessTokenExpiry: Date?
     private var codeVerifier: String?
+    private var pendingState: String?
     private var webAuthSession: ASWebAuthenticationSession?
 
     private let refreshTokenKey = "gmail_refresh_token"
@@ -27,7 +35,7 @@ final class AuthManager: NSObject, ObservableObject {
 
     func signIn() {
         guard Config.isGmailConfigured else {
-            lastError = "Configure d'abord ton Client ID Google dans Config.swift."
+            lastError = String(localized: "Configure d'abord ton Client ID Google dans Config.swift.")
             return
         }
 
@@ -35,6 +43,7 @@ final class AuthManager: NSObject, ObservableObject {
         codeVerifier = verifier
         let challenge = Self.codeChallenge(for: verifier)
         let state = Self.randomURLSafeString(length: 16)
+        pendingState = state
 
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
         components.queryItems = [
@@ -63,20 +72,51 @@ final class AuthManager: NSObject, ObservableObject {
                     }
                     return
                 }
-                guard let callbackURL,
-                      let code = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)?
-                        .queryItems?.first(where: { $0.name == "code" })?.value
-                else {
-                    self.lastError = "Autorisation Google incomplète."
+                defer { self.pendingState = nil }
+                guard let callbackURL, let expectedState = self.pendingState else {
+                    self.lastError = AuthFlowError.missingCode.localizedDescription
                     return
                 }
-                await self.exchangeCodeForTokens(code: code)
+                do {
+                    let code = try Self.authorizationCode(from: callbackURL, expectedState: expectedState)
+                    await self.exchangeCodeForTokens(code: code)
+                } catch {
+                    self.lastError = error.localizedDescription
+                }
             }
         }
         session.presentationContextProvider = self
         session.prefersEphemeralWebBrowserSession = false
         webAuthSession = session
         session.start()
+    }
+
+    /// Valide la redirection OAuth : refuse un `state` différent (CSRF) et remonte les erreurs Google.
+    nonisolated static func authorizationCode(from callback: URL, expectedState: String) throws -> String {
+        let items = URLComponents(url: callback, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
+
+        if let error = value("error") {
+            throw AuthFlowError.denied(error)
+        }
+        guard value("state") == expectedState else {
+            throw AuthFlowError.stateMismatch
+        }
+        guard let code = value("code"), !code.isEmpty else {
+            throw AuthFlowError.missingCode
+        }
+        return code
+    }
+
+    func invalidateAccessToken() {
+        accessToken = nil
+        accessTokenExpiry = nil
+    }
+
+    /// Jeton révoqué ou expiré : on déconnecte proprement et on explique pourquoi.
+    func handleSessionExpired() {
+        signOut()
+        lastError = GmailError.sessionExpired.localizedDescription
     }
 
     func signOut() {
@@ -116,7 +156,7 @@ final class AuthManager: NSObject, ObservableObject {
             isSignedIn = true
             await fetchUserEmail()
         } catch {
-            lastError = "Échec de connexion Gmail : \(error.localizedDescription)"
+            lastError = String(localized: "Échec de connexion Gmail : \(error.localizedDescription)")
         }
     }
 
@@ -140,6 +180,11 @@ final class AuthManager: NSObject, ObservableObject {
         request.httpBody = Self.formEncode(params)
 
         let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 400 || http.statusCode == 401,
+           String(data: data, encoding: .utf8)?.contains("invalid_grant") == true {
+            handleSessionExpired()
+            throw GmailError.sessionExpired
+        }
         try Self.validate(response, data: data)
         let token = try JSONDecoder().decode(TokenResponse.self, from: data)
         accessToken = token.accessToken
@@ -185,10 +230,7 @@ final class AuthManager: NSObject, ObservableObject {
     }
 
     private static func validate(_ response: URLResponse, data: Data) throws {
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw GmailError.requestFailed(body)
-        }
+        try GmailError.validate(response, data: data)
     }
 }
 
@@ -217,14 +259,50 @@ private struct TokenResponse: Decodable {
     }
 }
 
-enum GmailError: LocalizedError {
-    case notSignedIn
-    case requestFailed(String)
+enum AuthFlowError: LocalizedError, Equatable {
+    case stateMismatch
+    case missingCode
+    case denied(String)
 
     var errorDescription: String? {
         switch self {
-        case .notSignedIn: return "Non connecté à Gmail."
-        case .requestFailed(let body): return "Requête Gmail échouée : \(body)"
+        case .stateMismatch: return String(localized: "La réponse de Google ne correspond pas à ta demande de connexion. Réessaie.")
+        case .missingCode: return String(localized: "Autorisation Google incomplète.")
+        case .denied(let reason): return String(localized: "Google a refusé la connexion (\(reason)).")
         }
+    }
+}
+
+enum GmailError: LocalizedError, Equatable {
+    case notSignedIn
+    case sessionExpired
+    case api(status: Int, message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .notSignedIn:
+            return String(localized: "Non connecté à Gmail.")
+        case .sessionExpired:
+            return String(localized: "Ta session Gmail a expiré. Reconnecte-toi pour continuer.")
+        case .api(let status, let message):
+            return message.isEmpty ? String(localized: "Gmail a répondu avec une erreur (\(status)).") : message
+        }
+    }
+
+    /// Transforme une réponse HTTP non-2xx en erreur lisible (message Google extrait du JSON).
+    static func validate(_ response: URLResponse, data: Data) throws {
+        guard let http = response as? HTTPURLResponse else { throw GmailError.api(status: 0, message: "") }
+        guard (200..<300).contains(http.statusCode) else {
+            if http.statusCode == 401 { throw GmailError.sessionExpired }
+            throw GmailError.api(status: http.statusCode, message: googleMessage(from: data))
+        }
+    }
+
+    private static func googleMessage(from data: Data) -> String {
+        struct Envelope: Decodable {
+            struct Body: Decodable { let message: String? }
+            let error: Body?
+        }
+        return (try? JSONDecoder().decode(Envelope.self, from: data))?.error?.message ?? ""
     }
 }

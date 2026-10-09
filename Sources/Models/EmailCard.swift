@@ -1,6 +1,6 @@
 import Foundation
 
-struct EmailCard: Identifiable, Equatable {
+struct EmailCard: Identifiable, Equatable, Codable {
     let id: String
     let threadId: String
     var subject: String
@@ -9,6 +9,10 @@ struct EmailCard: Identifiable, Equatable {
     var senderEmail: String
     var date: Date
     var isUnread: Bool
+    /// En-têtes utiles pour répondre dans le bon fil de discussion.
+    var messageIdHeader: String? = nil
+    var references: String? = nil
+    var replyTo: String? = nil
 
     static func == (lhs: EmailCard, rhs: EmailCard) -> Bool {
         lhs.id == rhs.id
@@ -22,10 +26,10 @@ enum SwipeDirection {
 extension SwipeDirection {
     var actionTitle: String {
         switch self {
-        case .right: return "Répondre"
-        case .left: return "Supprimer"
-        case .up: return "Archiver"
-        case .down: return "Snoozer"
+        case .right: return String(localized: "Répondre")
+        case .left: return String(localized: "Supprimer")
+        case .up: return String(localized: "Archiver")
+        case .down: return String(localized: "Snoozer")
         }
     }
 

@@ -10,3 +10,6 @@ DerivedData/
 
 # macOS
 .DS_Store
+
+# Réglages de signature locaux (Team ID)
+Config/Local.xcconfig
