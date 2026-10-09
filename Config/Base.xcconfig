@@ -1,0 +1,2 @@
+// Réglages communs. Ton identifiant d'équipe Apple va dans Config/Local.xcconfig (non versionné).
+#include? "Local.xcconfig"
