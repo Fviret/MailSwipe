@@ -9,7 +9,7 @@ final class RollbackTests: XCTestCase {
     override func setUp() async throws {
         UserDefaults.standard.removeObject(forKey: "mailswipe.snoozed")
         spy = SpyMailService()
-        store = EmailStore(auth: AuthManager(), mock: spy)
+        store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0)
         await store.loadInbox()
     }
 

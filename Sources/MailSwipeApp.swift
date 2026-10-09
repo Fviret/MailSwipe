@@ -11,11 +11,17 @@ struct MailSwipeApp: App {
         _store = StateObject(wrappedValue: EmailStore(auth: authManager))
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(auth)
                 .environmentObject(store)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // On ne laisse pas une action en attente se perdre si l'app quitte l'écran.
+            if phase != .active { Task { await store.flushPending() } }
         }
     }
 }

@@ -6,7 +6,6 @@ struct CardStackView: View {
     @State private var pendingReply: EmailCard?
     @State private var pendingSnooze: EmailCard?
     @State private var resetTokens: [String: Int] = [:]
-    @State private var showUndoToast = false
 
     private let maxVisible = 3
 
@@ -49,7 +48,6 @@ struct CardStackView: View {
             ReplySheet(card: card) { text in
                 store.reply(card, text: text)
                 pendingReply = nil
-                withAnimation { showUndoToast = true }
             } onCancel: {
                 resetTokens[card.id, default: 0] += 1
                 pendingReply = nil
@@ -65,16 +63,14 @@ struct CardStackView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if showUndoToast, let action = store.lastAction {
-                UndoToast(action: action) { showUndoToast = false }
+            if let action = store.pending {
+                UndoToast(action: action) { store.undo() }
+                    .id(action.id)
                     .padding(.bottom, 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .task {
-                        try? await Task.sleep(nanoseconds: 2_500_000_000)
-                        withAnimation { showUndoToast = false }
-                    }
             }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: store.pending?.id)
     }
 
     private var visibleCards: [EmailCard] {
@@ -87,10 +83,8 @@ struct CardStackView: View {
             pendingReply = card
         case .left:
             store.delete(card)
-            withAnimation { showUndoToast = true }
         case .up:
             store.archive(card)
-            withAnimation { showUndoToast = true }
         case .down:
             pendingSnooze = card
         }
@@ -98,21 +92,48 @@ struct CardStackView: View {
 }
 
 private struct UndoToast: View {
-    let action: EmailStore.LastAction
-    let onDismiss: () -> Void
+    let action: PendingAction
+    let onUndo: () -> Void
+    @State private var remaining: CGFloat = 1
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: action.direction.symbolName)
-            Text("\(action.direction.actionTitle) · \(action.card.senderName)")
+            Text(message)
                 .lineLimit(1)
             Spacer(minLength: 8)
+            Button("Annuler", action: onUndo)
+                .bold()
+                .foregroundStyle(.yellow)
         }
         .font(.subheadline)
         .foregroundStyle(.white)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.black.opacity(0.85), in: Capsule())
+        .background(alignment: .bottomLeading) {
+            GeometryReader { proxy in
+                Rectangle()
+                    .fill(.white.opacity(0.18))
+                    .frame(width: proxy.size.width * remaining)
+            }
+        }
+        .background(Color.black.opacity(0.88))
+        .clipShape(Capsule())
         .padding(.horizontal, 24)
+        .onAppear {
+            withAnimation(.linear(duration: action.delay)) { remaining = 0 }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    private var message: String {
+        let name = action.card.senderName
+        switch action.kind {
+        case .reply: return "Réponse à \(name) en cours d'envoi"
+        case .delete: return "Supprimé · \(name)"
+        case .archive: return "Archivé · \(name)"
+        case .snooze: return "Snoozé · \(name)"
+        }
     }
 }

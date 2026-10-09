@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class EmailStoreTests: XCTestCase {
     private func makeStore() -> EmailStore {
-        EmailStore(auth: AuthManager())
+        EmailStore(auth: AuthManager(), undoDelay: 0)
     }
 
     func testLoadInboxFillsFromMockService() async {
@@ -34,7 +34,7 @@ final class EmailStoreTests: XCTestCase {
         let store = makeStore()
         await store.loadInbox()
         let card = store.inbox[0]
-        store.archive(card)
+        await store.archive(card).value
         XCTAssertFalse(store.inbox.contains(card))
         XCTAssertEqual(store.archived.first, card)
     }
