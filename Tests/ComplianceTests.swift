@@ -67,3 +67,23 @@ final class ComplianceTests: XCTestCase {
         XCTAssertEqual(Config.supportURL.scheme, "https")
     }
 }
+
+final class BundleMetadataTests: XCTestCase {
+    private var info: [String: Any] { Bundle(for: AuthManager.self).infoDictionary ?? [:] }
+
+    func testAppIconIsDeclared() {
+        let icons = info["CFBundleIcons"] as? [String: Any]
+        XCTAssertNotNil(icons?["CFBundlePrimaryIcon"], "icône d'app absente de l'Info.plist compilé")
+    }
+
+    func testVersionNumbersAreResolved() {
+        let version = info["CFBundleShortVersionString"] as? String ?? ""
+        let build = info["CFBundleVersion"] as? String ?? ""
+        XCTAssertFalse(version.isEmpty || version.contains("$("), "version non résolue : \(version)")
+        XCTAssertFalse(build.isEmpty || build.contains("$("), "build non résolu : \(build)")
+    }
+
+    func testBundleIdentifier() {
+        XCTAssertEqual(Bundle(for: AuthManager.self).bundleIdentifier, "com.floviret.mailswipe")
+    }
+}
