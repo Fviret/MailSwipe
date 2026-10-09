@@ -24,9 +24,13 @@ final class SnoozeScheduler: ObservableObject {
     }
 
     func cancel(_ item: SnoozeItem) {
-        items.removeAll { $0.id == item.id }
+        remove(id: item.id)
+    }
+
+    func remove(id: String) {
+        items.removeAll { $0.id == id }
         save()
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [item.id])
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
     }
 
     /// Retourne les mails dont l'heure de réveil est passée, et les retire de la liste snoozée.

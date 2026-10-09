@@ -24,15 +24,24 @@ final class GmailAPI: MailService {
         let list = try JSONDecoder().decode(MessageListResponse.self, from: listData)
         guard let messages = list.messages, !messages.isEmpty else { return [] }
 
-        return try await withThrowingTaskGroup(of: EmailCard?.self) { group in
+        return try await withThrowingTaskGroup(of: Result<EmailCard, Error>.self) { group in
             for message in messages {
-                group.addTask { try? await self.fetchCard(id: message.id) }
+                group.addTask {
+                    do { return .success(try await self.fetchCard(id: message.id)) }
+                    catch { return .failure(error) }
+                }
             }
-            var results: [EmailCard] = []
-            for try await card in group {
-                if let card { results.append(card) }
+            var cards: [EmailCard] = []
+            var firstError: Error?
+            for try await result in group {
+                switch result {
+                case .success(let card): cards.append(card)
+                case .failure(let error): firstError = firstError ?? error
+                }
             }
-            return results.sorted { $0.date > $1.date }
+            // Tout a échoué : on remonte l'erreur au lieu d'afficher une fausse « boîte vide ».
+            if cards.isEmpty, let firstError { throw firstError }
+            return cards.sorted { $0.date > $1.date }
         }
     }
 

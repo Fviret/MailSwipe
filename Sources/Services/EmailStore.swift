@@ -63,51 +63,75 @@ final class EmailStore: ObservableObject {
     }
 
     // MARK: - Actions déclenchées par le swipe
+    //
+    // Chaque action est optimiste (la carte disparaît tout de suite) mais revient
+    // à sa place d'origine si l'appel au serveur échoue, avec un message d'erreur.
 
-    func reply(_ card: EmailCard, text: String) {
-        remove(card)
+    @discardableResult
+    func reply(_ card: EmailCard, text: String) -> Task<Void, Never> {
+        let index = detach(card)
         lastAction = LastAction(card: card, direction: .right)
         let service = self.service
-        Task {
+        return Task {
             do { try await service.sendReply(to: card, body: text) }
-            catch { errorMessage = "Échec de l'envoi : \(error.localizedDescription)" }
+            catch { rollback(card, at: index, message: "Échec de l'envoi", error: error) }
         }
     }
 
-    func delete(_ card: EmailCard) {
-        remove(card)
+    @discardableResult
+    func delete(_ card: EmailCard) -> Task<Void, Never> {
+        let index = detach(card)
         lastAction = LastAction(card: card, direction: .left)
         let service = self.service
-        Task {
+        return Task {
             do { try await service.trash(messageId: card.id) }
-            catch { errorMessage = "Échec de la suppression : \(error.localizedDescription)" }
+            catch { rollback(card, at: index, message: "Échec de la suppression", error: error) }
         }
     }
 
-    func archive(_ card: EmailCard) {
-        remove(card)
+    @discardableResult
+    func archive(_ card: EmailCard) -> Task<Void, Never> {
+        let index = detach(card)
         archived.insert(card, at: 0)
         lastAction = LastAction(card: card, direction: .up)
         let service = self.service
-        Task {
+        return Task {
             do { try await service.archive(messageId: card.id) }
-            catch { errorMessage = "Échec de l'archivage : \(error.localizedDescription)" }
+            catch {
+                archived.removeAll { $0.id == card.id }
+                rollback(card, at: index, message: "Échec de l'archivage", error: error)
+            }
         }
     }
 
-    func snooze(_ card: EmailCard, duration: SnoozeDuration) {
-        remove(card)
+    @discardableResult
+    func snooze(_ card: EmailCard, duration: SnoozeDuration) -> Task<Void, Never> {
+        let index = detach(card)
         snoozeScheduler.snooze(card, until: duration.resolvedDate())
         lastAction = LastAction(card: card, direction: .down)
         let service = self.service
-        Task {
+        return Task {
             do { try await service.snooze(messageId: card.id) }
-            catch { errorMessage = "Échec du snooze : \(error.localizedDescription)" }
+            catch {
+                snoozeScheduler.remove(id: card.id)
+                rollback(card, at: index, message: "Échec du snooze", error: error)
+            }
         }
     }
 
-    private func remove(_ card: EmailCard) {
+    /// Retire la carte de la pile et renvoie sa position, pour pouvoir la remettre en cas d'échec.
+    private func detach(_ card: EmailCard) -> Int {
+        errorMessage = nil
+        let index = inbox.firstIndex { $0.id == card.id } ?? 0
         inbox.removeAll { $0.id == card.id }
+        return index
+    }
+
+    private func rollback(_ card: EmailCard, at index: Int, message: String, error: Error) {
+        if !inbox.contains(where: { $0.id == card.id }) {
+            inbox.insert(card, at: min(index, inbox.count))
+        }
+        errorMessage = "\(message) : \(error.localizedDescription)"
     }
 
     // MARK: - Réapparition des mails snoozés
@@ -129,7 +153,10 @@ final class EmailStore: ObservableObject {
         }
         let service = self.service
         for item in due {
-            Task { try? await service.unsnooze(messageId: item.id) }
+            Task {
+                do { try await service.unsnooze(messageId: item.id) }
+                catch { errorMessage = "Impossible de remettre « \(item.card.subject) » dans ta boîte Gmail : \(error.localizedDescription)" }
+            }
         }
     }
 }

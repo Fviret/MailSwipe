@@ -15,6 +15,8 @@ struct InboxView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                         .padding(.horizontal)
+                        .onTapGesture { store.errorMessage = nil }
+                        .accessibilityHint("Toucher pour masquer")
                 }
 
                 if store.isLoading && store.inbox.isEmpty {
