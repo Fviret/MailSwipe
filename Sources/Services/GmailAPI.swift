@@ -78,29 +78,40 @@ final class GmailAPI: MailService {
     // MARK: - Networking
 
     private func get(_ url: URL) async throws -> Data {
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(try await auth.validAccessToken())", forHTTPHeaderField: "Authorization")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Self.validate(response, data: data)
-        return data
+        try await perform { token in
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            return request
+        }
     }
 
     private func post(_ url: URL, body: Data) async throws -> Data {
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.httpBody = body
-        request.setValue("Bearer \(try await auth.validAccessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Self.validate(response, data: data)
-        return data
+        try await perform { token in
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = body
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            return request
+        }
     }
 
-    private static func validate(_ response: URLResponse, data: Data) throws {
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw GmailError.requestFailed(body)
+    /// Une seule nouvelle tentative après un 401 (jeton d'accès périmé côté Google) ; au second 401, on déconnecte.
+    private func perform(_ makeRequest: (String) -> URLRequest) async throws -> Data {
+        for attempt in 0..<2 {
+            let token = try await auth.validAccessToken()
+            let (data, response) = try await URLSession.shared.data(for: makeRequest(token))
+            if (response as? HTTPURLResponse)?.statusCode == 401 {
+                if attempt == 0 {
+                    await auth.invalidateAccessToken()
+                    continue
+                }
+                await auth.handleSessionExpired()
+            }
+            try GmailError.validate(response, data: data)
+            return data
         }
+        throw GmailError.sessionExpired
     }
 
     private static func buildMIMEReply(to card: EmailCard, bodyText: String) -> String {
