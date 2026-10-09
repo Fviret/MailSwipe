@@ -40,3 +40,14 @@ enum TestStorage {
         return url
     }
 }
+
+/// Remplace le centre de notifications : enregistre ce qui serait planifié, ne demande jamais d'autorisation.
+final class RecordingNotifications: NotificationScheduling {
+    private(set) var permissionRequests = 0
+    private(set) var scheduled: [(id: String, title: String, body: String, at: Date)] = []
+    private(set) var cancelled: [String] = []
+
+    func requestPermission() { permissionRequests += 1 }
+    func schedule(id: String, title: String, body: String, at date: Date) { scheduled.append((id, title, body, date)) }
+    func cancel(ids: [String]) { cancelled += ids }
+}

@@ -85,7 +85,7 @@ final class GmailBodyFetchTests: XCTestCase {
 final class BodyCacheTests: XCTestCase {
     func testBodyIsFetchedOncePerMail() async throws {
         let spy = SpyMailService()
-        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
         let card = store.inbox[0]
         _ = try await store.body(for: card)
@@ -95,7 +95,7 @@ final class BodyCacheTests: XCTestCase {
 
     func testBodyFailureIsPropagatedAndNotCached() async {
         let spy = SpyMailService()
-        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
         await store.loadInbox()
         spy.failing = true
         do { _ = try await store.body(for: store.inbox[0]); XCTFail() } catch {}

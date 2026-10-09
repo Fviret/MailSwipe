@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class EmailStoreTests: XCTestCase {
     private func makeStore() -> EmailStore {
-        EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        EmailStore(auth: AuthManager(), undoDelay: 0, storageDirectory: TestStorage.makeDirectory(), notifications: RecordingNotifications())
     }
 
     func testLoadInboxFillsFromMockService() async {

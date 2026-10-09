@@ -76,7 +76,8 @@ final class EmailStore: ObservableObject {
         snoozeScheduler: SnoozeScheduler? = nil,
         undoDelay: TimeInterval = 4,
         storageDirectory: URL? = nil,
-        gmailConfigured: Bool = Config.isGmailConfigured
+        gmailConfigured: Bool = Config.isGmailConfigured,
+        notifications: NotificationScheduling = SystemNotificationScheduler()
     ) {
         self.undoDelay = undoDelay
         self.auth = auth
@@ -88,7 +89,7 @@ final class EmailStore: ObservableObject {
         let directory = self.storageRoot.appendingPathComponent(
             (!gmailConfigured) ? "demo" : "live", isDirectory: true
         )
-        self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler(directory: directory)
+        self.snoozeScheduler = snoozeScheduler ?? SnoozeScheduler(directory: directory, notifications: notifications)
         self.archiveStorage = JSONFileStore(filename: "archive.json", directory: directory)
         self.archived = archiveStorage.load() ?? []
         startDueCheckTimer()
