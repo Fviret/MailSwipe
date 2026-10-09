@@ -78,3 +78,34 @@ final class UndoTests: XCTestCase {
         XCTAssertEqual(store.archived.first, card)
     }
 }
+
+@MainActor
+final class SnoozeResurfaceTests: XCTestCase {
+    func testDueSnoozedMailReturnsToTopOfInboxAndIsRestoredInGmail() async {
+        let spy = SpyMailService()
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        await store.loadInbox()
+        let card = store.inbox[3]
+        await store.snooze(card, duration: .oneHour).value
+        XCTAssertFalse(store.inbox.contains(card))
+
+        store.snoozeScheduler.snooze(card, until: Date().addingTimeInterval(-1)) // l'heure est passée
+        store.resurfaceDueSnoozes()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertEqual(store.inbox.first, card)
+        XCTAssertTrue(spy.calls.contains("unsnooze:\(card.id)"))
+        XCTAssertTrue(store.snoozeScheduler.items.isEmpty)
+    }
+
+    func testReloadDoesNotSwallowAMailThatBecameDue() async {
+        let spy = SpyMailService()
+        let store = EmailStore(auth: AuthManager(), mock: spy, undoDelay: 0, storageDirectory: TestStorage.makeDirectory())
+        await store.loadInbox()
+        let card = store.inbox[0]
+        await store.snooze(card, duration: .oneHour).value
+        store.snoozeScheduler.snooze(card, until: Date().addingTimeInterval(-1))
+        await store.loadInbox(force: true)
+        XCTAssertEqual(store.inbox.first, card)
+    }
+}
