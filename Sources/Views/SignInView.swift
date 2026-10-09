@@ -42,6 +42,10 @@ struct SignInView: View {
                     store.enableMockPreview()
                 }
                 .font(.footnote)
+
+                Link("Politique de confidentialité", destination: Config.privacyPolicyURL)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 40)

@@ -29,6 +29,9 @@ enum Config {
         return "com.googleusercontent.apps.\(prefix)"
     }
 
+    static let privacyPolicyURL = URL(string: "https://github.com/Fviret/MailSwipe/blob/main/docs/PRIVACY.md")!
+    static let supportURL = URL(string: "https://github.com/Fviret/MailSwipe/issues")!
+
     static let redirectURI = "\(reversedClientIDScheme):/oauth2redirect"
 
     static let scopes = [
