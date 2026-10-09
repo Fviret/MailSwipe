@@ -25,3 +25,23 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         GOOGLE_REVERSED_CLIENT_ID_SCHEME: mailswipe.oauth
+  MailSwipeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: MailSwipe
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.floviret.mailswipe.tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  MailSwipe:
+    build:
+      targets:
+        MailSwipe: all
+    test:
+      targets:
+        - MailSwipeTests
