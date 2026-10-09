@@ -8,11 +8,19 @@ import UserNotifications
 final class SnoozeScheduler: ObservableObject {
     @Published private(set) var items: [SnoozeItem] = []
 
-    private let storage: JSONFileStore<[SnoozeItem]>
+    private var storage: JSONFileStore<[SnoozeItem]>
 
     init(directory: URL? = nil) {
         storage = JSONFileStore(filename: "snoozed.json", directory: directory)
         items = storage.load() ?? []
+    }
+
+    /// Bascule vers un autre dossier de données (démo ↔ compte réel) sans mélanger les mails.
+    func use(directory: URL) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: items.map(\.id))
+        storage = JSONFileStore(filename: "snoozed.json", directory: directory)
+        items = storage.load() ?? []
+        for item in items where item.wakeAt > Date() { scheduleNotification(for: item) }
     }
 
     func snooze(_ card: EmailCard, until date: Date) {

@@ -29,7 +29,7 @@ struct InboxView: View {
             }
             .navigationTitle("Inbox")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await store.loadInbox() }
+            .task(id: store.isMockMode) { await store.loadInbox() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -46,16 +46,32 @@ struct InboxView: View {
 }
 
 private struct MockModeBanner: View {
+    @EnvironmentObject var store: EmailStore
+
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "wand.and.stars")
-            Text("Mode démo — mails fictifs. Configure Gmail dans Config.swift.")
-                .font(.caption)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Mode démo — ces mails sont fictifs.")
+                #if DEBUG
+                if !Config.isGmailConfigured {
+                    Text("Dev : renseigne ton Client ID dans Config.swift pour utiliser Gmail.")
+                        .font(.caption2)
+                }
+                #endif
+            }
+            .font(.caption)
+            Spacer(minLength: 4)
+            if Config.isGmailConfigured {
+                Button("Quitter") { store.exitMockPreview() }
+                    .font(.caption.bold())
+            }
         }
         .foregroundStyle(.orange)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .background(Color.orange.opacity(0.12))
+        .accessibilityElement(children: .combine)
     }
 }
