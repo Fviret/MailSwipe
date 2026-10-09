@@ -14,6 +14,9 @@ struct ReplySheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("À \(card.senderName)")
                         .font(.subheadline.bold())
+                    Text(ReplyBuilder.replyAddress(for: card))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     Text("Re: \(card.subject)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
