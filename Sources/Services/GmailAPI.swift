@@ -81,6 +81,14 @@ final class GmailAPI: MailService {
         return message.asEmailCard()
     }
 
+    func fetchBody(messageId: String) async throws -> String {
+        var components = URLComponents(url: baseURL.appendingPathComponent("messages/\(messageId)"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "format", value: "full")]
+        let data = try await get(components.url!)
+        let message = try JSONDecoder().decode(GmailFullMessage.self, from: data)
+        return EmailBodyParser.text(from: message.payload)
+    }
+
     func trash(messageId: String) async throws {
         _ = try await post(baseURL.appendingPathComponent("messages/\(messageId)/trash"), body: Data())
     }

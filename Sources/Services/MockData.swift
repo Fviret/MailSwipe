@@ -126,4 +126,41 @@ enum MockData {
             ),
         ]
     }
+
+    /// Corps complets des mails de démo (pour l'écran de lecture).
+    static func body(for id: String) -> String {
+        switch id {
+        case "mock-2":
+            return """
+            Salut,
+
+            Peux-tu me confirmer si tu es dispo jeudi pour caler les priorités du prochain trimestre ? On a pas mal de sujets à trancher :
+
+            • la roadmap mobile (livraison de la V2)
+            • le budget des tests utilisateurs
+            • l'arbitrage entre la refonte de l'onboarding et les notifications
+
+            Je propose 14h en salle Horizon, 1h30 maximum. Dis-moi si ça te va, sinon on décale à vendredi matin.
+
+            Merci !
+            Camille
+            """
+        case "mock-9":
+            return """
+            Bonjour,
+
+            Merci pour votre retour rapide. Nous validons le devis tel que présenté.
+
+            Pouvez-vous nous envoyer le planning de réalisation avec les dates de livraison de chaque étape (maquettes, développement, recette) ? Nous aimerions démarrer la semaine prochaine si possible.
+
+            Bien cordialement,
+            Sophie Bernard
+            Atelier Bernard
+            """
+        default:
+            let card = inbox().first { $0.id == id }
+            return (card?.snippet ?? "")
+                + "\n\nCeci est un mail de démonstration : le contenu complet d'un vrai mail Gmail s'affiche ici."
+        }
+    }
 }

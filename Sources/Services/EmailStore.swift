@@ -25,6 +25,7 @@ final class EmailStore: ObservableObject {
     private var hasLoadedOnce = false
     private var nextPageToken: String?
     private var loadGeneration = 0
+    private var bodyCache: [String: String] = [:]
     /// Mails déjà traités pendant cette session : Gmail peut encore les renvoyer quelques secondes.
     private var handledIds = Set<String>()
     static let prefetchThreshold = 5
@@ -222,11 +223,20 @@ final class EmailStore: ObservableObject {
         }
     }
 
+    /// Texte complet du mail (mis en cache pour la session).
+    func body(for card: EmailCard) async throws -> String {
+        if let cached = bodyCache[card.id] { return cached }
+        let text = try await service.fetchBody(messageId: card.id)
+        bodyCache[card.id] = text
+        return text
+    }
+
     /// Efface les données locales d'un compte (archive et mails snoozés), à la déconnexion.
     func clearLocalData() {
         pending?.task?.cancel()
         pending = nil
         archived = []
+        bodyCache = [:]
         archiveStorage.delete()
         snoozeScheduler.removeAll()
         inbox = []
