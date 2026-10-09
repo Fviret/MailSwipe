@@ -6,6 +6,7 @@ struct CardStackView: View {
     @State private var pendingReply: EmailCard?
     @State private var pendingSnooze: EmailCard?
     @State private var noReplyCard: EmailCard?
+    @State private var detailCard: EmailCard?
     @State private var resetTokens: [String: Int] = [:]
 
     private let maxVisible = 3
@@ -26,7 +27,8 @@ struct CardStackView: View {
                 if index == 0 {
                     SwipeCardView(
                         content: { EmailCardContent(card: card) },
-                        onCommit: { direction in handleCommit(card: card, direction: direction) }
+                        onCommit: { direction in handleCommit(card: card, direction: direction) },
+                        onTap: { detailCard = card }
                     )
                     .id("\(card.id)-\(resetTokens[card.id, default: 0])")
                     .zIndex(Double(maxVisible - index))
@@ -61,6 +63,12 @@ struct CardStackView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("\(noReplyCard?.senderName ?? "Cet expéditeur") utilise une adresse « ne pas répondre ».")
+        }
+        .sheet(item: $detailCard) { card in
+            EmailDetailView(card: card) {
+                detailCard = nil
+                handleCommit(card: card, direction: .right)
+            }
         }
         .sheet(item: $pendingSnooze) { card in
             SnoozePickerSheet { duration in

@@ -11,6 +11,7 @@ struct MailPage {
 /// Accès à une boîte mail. Implémenté par `GmailAPI` (réel) et `MockMailService` (démo / tests).
 protocol MailService {
     func fetchInbox(pageToken: String?) async throws -> MailPage
+    func fetchBody(messageId: String) async throws -> String
     func trash(messageId: String) async throws
     func archive(messageId: String) async throws
     func snooze(messageId: String) async throws
@@ -29,6 +30,7 @@ struct MockMailService: MailService {
         let end = min(start + pageSize, all.count)
         return MailPage(cards: Array(all[start..<end]), nextPageToken: end < all.count ? String(end) : nil)
     }
+    func fetchBody(messageId: String) async throws -> String { MockData.body(for: messageId) }
     func trash(messageId: String) async throws {}
     func archive(messageId: String) async throws {}
     func snooze(messageId: String) async throws {}

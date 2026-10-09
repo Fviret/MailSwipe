@@ -5,6 +5,7 @@ import SwiftUI
 struct SwipeCardView<Content: View>: View {
     let content: Content
     let onCommit: (SwipeDirection) -> Void
+    var onTap: (() -> Void)?
 
     @State private var offset: CGSize = .zero
     @State private var isDragging = false
@@ -12,9 +13,14 @@ struct SwipeCardView<Content: View>: View {
     private let commitDistance: CGFloat = 130
     private let commitVelocity: CGFloat = 700
 
-    init(@ViewBuilder content: () -> Content, onCommit: @escaping (SwipeDirection) -> Void) {
+    init(
+        @ViewBuilder content: () -> Content,
+        onCommit: @escaping (SwipeDirection) -> Void,
+        onTap: (() -> Void)? = nil
+    ) {
         self.content = content()
         self.onCommit = onCommit
+        self.onTap = onTap
     }
 
     var body: some View {
@@ -23,6 +29,7 @@ struct SwipeCardView<Content: View>: View {
             .rotationEffect(.degrees(Double(offset.width / 20)))
             .offset(offset)
             .scaleEffect(isDragging ? 1.03 : 1.0)
+            .onTapGesture { onTap?() }
             .gesture(dragGesture)
             .animation(.interactiveSpring(response: 0.35, dampingFraction: 0.85), value: isDragging)
     }

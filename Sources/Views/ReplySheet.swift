@@ -5,7 +5,9 @@ struct ReplySheet: View {
     let onSend: (String) -> Void
     let onCancel: () -> Void
 
+    @EnvironmentObject private var store: EmailStore
     @State private var text: String = ""
+    @State private var original: String?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -31,6 +33,19 @@ struct ReplySheet: View {
                     .frame(minHeight: 180)
 
                 quickReplies
+
+                DisclosureGroup("Mail d'origine") {
+                    ScrollView {
+                        Text(original ?? card.snippet)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 160)
+                }
+                .padding(.horizontal)
+                .task { original = try? await store.body(for: card) }
 
                 Spacer()
             }

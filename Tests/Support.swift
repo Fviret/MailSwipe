@@ -21,6 +21,11 @@ final class SpyMailService: MailService, @unchecked Sendable {
         let end = min(start + pageSize, cards.count)
         return MailPage(cards: Array(cards[start..<end]), nextPageToken: end < cards.count ? String(end) : nil)
     }
+    var bodies: [String: String] = [:]
+    func fetchBody(messageId: String) async throws -> String {
+        try record("body:\(messageId)")
+        return bodies[messageId] ?? "corps de \(messageId)"
+    }
     func trash(messageId: String) async throws { try record("trash:\(messageId)") }
     func archive(messageId: String) async throws { try record("archive:\(messageId)") }
     func snooze(messageId: String) async throws { try record("snooze:\(messageId)") }
