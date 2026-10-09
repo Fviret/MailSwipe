@@ -8,6 +8,13 @@ protocol NotificationScheduling {
     func cancel(ids: [String])
 }
 
+/// Pour les tests d'interface : aucune permission demandée, aucune notification planifiée.
+struct NoopNotificationScheduler: NotificationScheduling {
+    func requestPermission() {}
+    func schedule(id: String, title: String, body: String, at date: Date) {}
+    func cancel(ids: [String]) {}
+}
+
 struct SystemNotificationScheduler: NotificationScheduling {
     func requestPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }

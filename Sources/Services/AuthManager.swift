@@ -22,9 +22,12 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
     private var pendingState: String?
     private var webAuthSession: ASWebAuthenticationSession?
 
-    private let refreshTokenKey = "gmail_refresh_token"
+    private let session: URLSession
+    private let refreshTokenKey: String
 
-    override init() {
+    init(session: URLSession = .shared, refreshTokenKey: String = "gmail_refresh_token") {
+        self.session = session
+        self.refreshTokenKey = refreshTokenKey
         super.init()
         if KeychainStore.get(refreshTokenKey) != nil {
             isSignedIn = true
@@ -39,6 +42,23 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
             return
         }
 
+        guard let authURL = beginAuthorization() else { return }
+
+        let session = ASWebAuthenticationSession(
+            url: authURL,
+            callbackURLScheme: Config.reversedClientIDScheme
+        ) { [weak self] callbackURL, error in
+            guard let self else { return }
+            Task { @MainActor in await self.completeAuthorization(callbackURL: callbackURL, error: error) }
+        }
+        session.presentationContextProvider = self
+        session.prefersEphemeralWebBrowserSession = false
+        webAuthSession = session
+        session.start()
+    }
+
+    /// Prépare une connexion : mémorise verifier PKCE et `state`, et renvoie l'URL d'autorisation Google.
+    func beginAuthorization() -> URL? {
         let verifier = Self.randomURLSafeString(length: 64)
         codeVerifier = verifier
         let challenge = Self.codeChallenge(for: verifier)
@@ -57,38 +77,28 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
             URLQueryItem(name: "prompt", value: "consent"),
             URLQueryItem(name: "access_type", value: "offline"),
         ]
+        return components.url
+    }
 
-        guard let authURL = components.url else { return }
-
-        let session = ASWebAuthenticationSession(
-            url: authURL,
-            callbackURLScheme: Config.reversedClientIDScheme
-        ) { [weak self] callbackURL, error in
-            guard let self else { return }
-            Task { @MainActor in
-                if let error {
-                    if (error as NSError).code != ASWebAuthenticationSessionError.canceledLogin.rawValue {
-                        self.lastError = error.localizedDescription
-                    }
-                    return
-                }
-                defer { self.pendingState = nil }
-                guard let callbackURL, let expectedState = self.pendingState else {
-                    self.lastError = AuthFlowError.missingCode.localizedDescription
-                    return
-                }
-                do {
-                    let code = try Self.authorizationCode(from: callbackURL, expectedState: expectedState)
-                    await self.exchangeCodeForTokens(code: code)
-                } catch {
-                    self.lastError = error.localizedDescription
-                }
+    /// Traite la redirection de Google : annulation, erreur, `state` invalide, ou échange du code contre des jetons.
+    func completeAuthorization(callbackURL: URL?, error: Error?) async {
+        if let error {
+            if (error as NSError).code != ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                lastError = error.localizedDescription
             }
+            return
         }
-        session.presentationContextProvider = self
-        session.prefersEphemeralWebBrowserSession = false
-        webAuthSession = session
-        session.start()
+        defer { pendingState = nil }
+        guard let callbackURL, let expectedState = pendingState else {
+            lastError = AuthFlowError.missingCode.localizedDescription
+            return
+        }
+        do {
+            let code = try Self.authorizationCode(from: callbackURL, expectedState: expectedState)
+            await exchangeCodeForTokens(code: code)
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     /// Valide la redirection OAuth : refuse un `state` différent (CSRF) et remonte les erreurs Google.
@@ -145,7 +155,7 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
         request.httpBody = Self.formEncode(params)
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await session.data(for: request)
             try Self.validate(response, data: data)
             let token = try JSONDecoder().decode(TokenResponse.self, from: data)
             accessToken = token.accessToken
@@ -179,7 +189,7 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
         ]
         request.httpBody = Self.formEncode(params)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode == 400 || http.statusCode == 401,
            String(data: data, encoding: .utf8)?.contains("invalid_grant") == true {
             handleSessionExpired()
@@ -196,7 +206,7 @@ final class AuthManager: NSObject, ObservableObject, AccessTokenProviding {
         guard let token = try? await validAccessToken() else { return }
         var request = URLRequest(url: URL(string: "https://www.googleapis.com/oauth2/v2/userinfo")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        guard let (data, _) = try? await URLSession.shared.data(for: request) else { return }
+        guard let (data, _) = try? await session.data(for: request) else { return }
         struct UserInfo: Decodable { let email: String? }
         userEmail = try? JSONDecoder().decode(UserInfo.self, from: data).email
     }

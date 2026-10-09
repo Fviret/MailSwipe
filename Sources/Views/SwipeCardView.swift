@@ -11,9 +11,6 @@ struct SwipeCardView<Content: View>: View {
     @State private var isDragging = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let commitDistance: CGFloat = 130
-    private let commitVelocity: CGFloat = 700
-
     init(
         @ViewBuilder content: () -> Content,
         onCommit: @escaping (SwipeDirection) -> Void,
@@ -33,6 +30,7 @@ struct SwipeCardView<Content: View>: View {
             .onTapGesture { onTap?() }
             .gesture(dragGesture)
             .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("card.top")
             .accessibilityAddTraits(.isButton)
             .accessibilityHint(Text("Touchez deux fois pour lire le mail. Balayez vers le haut ou le bas pour les actions : répondre, supprimer, archiver ou snoozer."))
             .accessibilityAction(.default) { onTap?() }
@@ -61,30 +59,15 @@ struct SwipeCardView<Content: View>: View {
     }
 
     private func resolveGesture(translation: CGSize, velocity: CGSize) {
-        let horizontalWins = abs(translation.width) > abs(translation.height)
-        let distance = horizontalWins ? abs(translation.width) : abs(translation.height)
-        let vel = horizontalWins ? abs(velocity.width) : abs(velocity.height)
-
-        guard distance > commitDistance || vel > commitVelocity else {
+        guard let direction = SwipeResolver.resolve(translation: translation, velocity: velocity) else {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 offset = .zero
             }
             return
         }
 
-        let direction: SwipeDirection
-        if horizontalWins {
-            direction = translation.width > 0 ? .right : .left
-        } else {
-            direction = translation.height > 0 ? .down : .up
-        }
-
-        let flyOut = CGSize(
-            width: direction == .right ? 900 : (direction == .left ? -900 : translation.width * 3),
-            height: direction == .up ? -900 : (direction == .down ? 900 : translation.height * 3)
-        )
         withAnimation(.easeOut(duration: 0.28)) {
-            offset = flyOut
+            offset = SwipeResolver.flyOutOffset(for: direction, translation: translation)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
             onCommit(direction)
@@ -109,18 +92,7 @@ struct SwipeCardView<Content: View>: View {
         }
     }
 
-    private var activeDirection: SwipeDirection? {
-        guard offset != .zero else { return nil }
-        let horizontalWins = abs(offset.width) > abs(offset.height)
-        if horizontalWins {
-            return offset.width > 20 ? .right : (offset.width < -20 ? .left : nil)
-        } else {
-            return offset.height < -20 ? .up : (offset.height > 20 ? .down : nil)
-        }
-    }
+    private var activeDirection: SwipeDirection? { SwipeResolver.activeDirection(for: offset) }
 
-    private var progress: Double {
-        let distance = max(abs(offset.width), abs(offset.height))
-        return Double(distance / commitDistance)
-    }
+    private var progress: Double { SwipeResolver.progress(for: offset) }
 }

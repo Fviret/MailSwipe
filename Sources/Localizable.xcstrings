@@ -1051,6 +1051,17 @@
           }
         }
       }
+    },
+    "Retirer des snoozés": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from snoozed"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

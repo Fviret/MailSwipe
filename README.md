@@ -46,14 +46,21 @@ Le projet Xcode (`.xcodeproj`) est généré depuis `project.yml` et n'est pas v
 
 **Signature (appareil réel / App Store)** : copie `Config/Local.xcconfig.example` en `Config/Local.xcconfig` (ignoré par git) et renseigne ton `DEVELOPMENT_TEAM`.
 
-**Tests** :
+**Tests** (171 tests unitaires + 22 tests d'interface, ≈ 95 % des lignes de l'app couvertes) :
 
 ```bash
+# tout, avec la couverture
 xcodebuild test -project MailSwipe.xcodeproj -scheme MailSwipe \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=iPhone 17' -enableCodeCoverage YES
+
+# unitaires seulement (≈ 1 s) / interface seulement (≈ 4 min)
+xcodebuild test ... -only-testing:MailSwipeTests
+xcodebuild test ... -only-testing:MailSwipeUITests
 ```
 
-La suite (115 tests) couvre notamment le flux OAuth, les appels HTTP Gmail (via un faux réseau), la pagination, l'annulation, la persistance, la construction MIME des réponses, l'analyse des corps de mails, la localisation et la conformité App Store (manifeste de confidentialité, clés de version, politique).
+- **Unitaires** (`Tests/`) : flux OAuth et Keychain, appels HTTP Gmail via un faux réseau, pagination, annulation, persistance, MIME des réponses, analyse des corps de mails, règles de swipe, localisation, conformité App Store.
+- **Interface** (`UITests/`) : parcours complets en mode démo, en français et en anglais — vrais gestes de swipe, annulation, lecture, réponse, snooze, onglets, boîte vide, écran de connexion. Ils se lancent avec `-ui-testing` (données jetables, notifications neutralisées, voir `LaunchOptions.swift`).
+- Non couvert : l'ouverture réelle de la page de connexion Google (`ASWebAuthenticationSession`) et les actions personnalisées VoiceOver.
 
 ## Connecter un vrai compte Gmail
 

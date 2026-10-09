@@ -33,6 +33,15 @@ extension SwipeDirection {
         }
     }
 
+    var identifier: String {
+        switch self {
+        case .right: return "reply"
+        case .left: return "delete"
+        case .up: return "archive"
+        case .down: return "snooze"
+        }
+    }
+
     var symbolName: String {
         switch self {
         case .right: return "arrowshape.turn.up.left.fill"

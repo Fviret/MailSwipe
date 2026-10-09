@@ -26,6 +26,7 @@ struct ReplySheet: View {
                 .padding(.horizontal)
 
                 TextEditor(text: $text)
+                    .accessibilityIdentifier("reply.text")
                     .focused($focused)
                     .padding(8)
                     .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
@@ -58,6 +59,7 @@ struct ReplySheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Envoyer") { onSend(text) }
+                        .accessibilityIdentifier("reply.send")
                         .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .bold()
                 }
